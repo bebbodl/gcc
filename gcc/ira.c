@@ -5251,7 +5251,7 @@ init_prune_stack_vars ()
  * Search eliminable artifical spilled variables and replace them.
  */
 static bool
-prune_stack_vars ()
+prune_stack_vars (bool loops_p)
 {
   bool changed = false;
   int regno, max_regno;
@@ -5494,7 +5494,8 @@ prune_stack_vars ()
       /* the lifetime of all registers must be reconsidered - reset what's needed. */
       regstat_free_n_sets_and_refs ();
       regstat_free_ri ();
-      loop_optimizer_finalize ();
+      if (loops_p)
+	loop_optimizer_finalize ();
       free_dominance_info (CDI_DOMINATORS);
 
       /* plus restore the REG_EQUAL notes which were recorded during init_prune_stack_vars() ! */
@@ -5724,7 +5725,7 @@ ira (FILE *f)
       ira_color ();
 
     }
-  while (flag_prune_stack_vars && prune_stack_vars ());
+  while (flag_prune_stack_vars && prune_stack_vars (loops_p));
 
   ira_max_point_before_emit = ira_max_point;
 

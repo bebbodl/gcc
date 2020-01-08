@@ -2974,6 +2974,10 @@ pie
 Driver RejectNegative Negative(no-pie)
 Create a position independent executable.
 
+pthread
+Driver RejectNegative
+add -lpthread
+
 z
 Driver Joined Separate
 

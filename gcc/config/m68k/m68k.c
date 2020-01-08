@@ -162,7 +162,7 @@ struct m68k_address {
 };
 
 struct m68k_address_part {
-  rtx * loc;
+  rtx * mem_loc;
   rtx * base_loc;
   rtx * index_loc;
   rtx offset;
@@ -665,7 +665,7 @@ m68k_option_override (void)
     {
       m68k_symbolic_call_var = M68K_SYMBOLIC_CALL_JSR;
 #ifndef TARGET_AMIGAOS_VASM
-      m68k_symbolic_jump = "jra %a0";
+      m68k_symbolic_jump = "jbra %a0";
 #else
       m68k_symbolic_jump = "jmp %a0";
 #endif
@@ -696,7 +696,7 @@ m68k_option_override (void)
   switch (m68k_symbolic_call_var)
     {
     case M68K_SYMBOLIC_CALL_JSR:
-      m68k_symbolic_call = "jsr %a0";
+      m68k_symbolic_call = "jbsr %a0";
       break;
 
     case M68K_SYMBOLIC_CALL_BSR_C:
@@ -2053,7 +2053,8 @@ m68k_legitimate_index_reg_p (rtx x, bool strict_p)
 	return false;
     }
   /* Allow SUBREG everywhere we allow REG.  This results in better code.  */
-  if (!strict_p && GET_CODE (x) == SUBREG)
+  if (//!strict_p &&
+      GET_CODE (x) == SUBREG)
     x = SUBREG_REG (x);
 
   return (REG_P (x)
@@ -2316,10 +2317,10 @@ decompose_one(rtx * loc, struct m68k_address_part *address)
       return false;
 #else
       // plus (mem) (mem)  does not work either
-      if (address->loc)
+      if (address->mem_loc)
 	return false;
 
-      address->loc = loc;
+      address->mem_loc = loc;
       return decompose_one(&XEXP(x,0), 1 + address);
 #endif
     }
@@ -2345,11 +2346,11 @@ int decompose_mem(int reach, rtx x, struct m68k_address * address, int strict_p)
       return false;
 
   // now convert ap[0] / ap[1] into the address
-  if (ap->loc)
+  if (ap->mem_loc)
     {
       m68k_address_part * ap2 = &ap[1];
       address->code = MEM;
-      address->mem_loc = ap->loc;
+      address->mem_loc = ap->mem_loc;
 
       // outer base is never set
       if (ap->base_loc && !ap->index_loc)
@@ -2359,9 +2360,9 @@ int decompose_mem(int reach, rtx x, struct m68k_address * address, int strict_p)
 	  ap->base_loc = NULL;
 	}
 
-      if ( ap2->loc
+      if ( ap2->mem_loc
 	  || (ap->index_loc && ap2->index_loc)
-	  || (ap->offset && ap2->offset) || ap->base_loc)
+	  || ap->base_loc)
 	{
 	  address->code = POST_MODIFY; // this is a marker for reload: must not appear there
 	  r = false;
@@ -5683,7 +5684,7 @@ output_call (rtx x)
   if (symbolic_operand (x, VOIDmode))
     return m68k_symbolic_call;
   else
-    return "jsr %a0";
+    return "jbsr %a0";
 }
 
 /* Likewise sibling calls.  */
@@ -5694,7 +5695,7 @@ output_sibcall (rtx x)
   if (symbolic_operand (x, VOIDmode))
     return m68k_symbolic_jump;
   else
-    return "jmp %a0";
+    return "jbra %a0";
 }
 
 static void

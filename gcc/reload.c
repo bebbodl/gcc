@@ -106,9 +106,6 @@ a register with any other reload.  */
 #include "addresses.h"
 #include "params.h"
 
-extern rtx
-alter_subreg (rtx *xp, bool final_p);
-
 #ifdef TARGET_AMIGA
 
 struct m68k_address {
@@ -5054,6 +5051,7 @@ find_reloads_address (machine_mode mode, rtx *memrefloc, rtx ad,
 
       int base_regno = -1;
       int index_regno = -1;
+      enum reload_type utype = type == RELOAD_FOR_INPUT ? RELOAD_FOR_INPUT_ADDRESS : type;
 
       if (address.code != POST_MODIFY && address.base && !m68k_legitimate_base_reg_p(address.base, true))
 	{
@@ -5063,28 +5061,36 @@ find_reloads_address (machine_mode mode, rtx *memrefloc, rtx ad,
 				  *base_loc, 0, PLUS,
 				  GET_CODE (ad),
 				  base_loc, opnum,
-				  type, 0, insn);
+				  utype, 0, insn);
 	}
       if (address.code != POST_MODIFY && address.index_loc && !m68k_legitimate_index_reg_p(*address.index_loc, true))
 	{
 	  rtx * index_loc = address.index_loc;
+	  if (GET_CODE(*index_loc) == SIGN_EXTEND)
+	    index_loc = &XEXP(*index_loc, 0);
+	  if (GET_CODE(*index_loc) == SUBREG)
+	    index_loc = &XEXP(*index_loc, 0);
 	  if (DX) fprintf(stderr, "insn %d: reload index ", insn->u2.insn_uid), debug_rtx(*index_loc);
 	  find_reloads_address_1 (mode, as,
 				  *index_loc, 1, PLUS,
 				  GET_CODE (ad),
 				  index_loc, opnum,
-				  type, 0, insn);
+				  utype, 0, insn);
 	}
 
       if (address.outer_index_loc && !m68k_legitimate_index_reg_p(*address.outer_index_loc, true))
 	{
 	  rtx * index_loc = address.outer_index_loc;
+	  if (GET_CODE(*index_loc) == SIGN_EXTEND)
+	    index_loc = &XEXP(*index_loc, 0);
+	  if (GET_CODE(*index_loc) == SUBREG)
+	    index_loc = &XEXP(*index_loc, 0);
 	  if (DX) fprintf(stderr, "insn %d: reload outer index ", insn->u2.insn_uid), debug_rtx(*index_loc);
 	  find_reloads_address_1 (mode, as,
 				  *index_loc, 1, PLUS,
 				  GET_CODE (ad),
 				  index_loc, opnum,
-				  type, 0, insn);
+				  utype, 0, insn);
 	}
 
       // 68000 has only support for small offsets if base and index are used.
@@ -5093,7 +5099,7 @@ find_reloads_address (machine_mode mode, rtx *memrefloc, rtx ad,
 	{
 	  push_reload (XEXP(ad, 0), NULL_RTX, &XEXP(ad, 0), (rtx*) 0,
 			   ADDR_REGS,
-			   GET_MODE (ad), VOIDmode, 0, 0, opnum, type);
+			   GET_MODE (ad), VOIDmode, 0, 0, opnum, utype);
 	}
 
       /* SBF: if both indexes are in use we reload the inner mem into an address reg.
@@ -5101,7 +5107,6 @@ find_reloads_address (machine_mode mode, rtx *memrefloc, rtx ad,
        * is combinable with an address register.
        */
       if (address.code == POST_MODIFY || (address.index && address.outer_index)
-	  || (address.offset && address.outer_offset)
 	  || (!TARGET_68020 && address.code == MEM)
 	  )
 	{
@@ -5129,11 +5134,8 @@ find_reloads_address (machine_mode mode, rtx *memrefloc, rtx ad,
 
 	  push_reload (x, NULL_RTX, address.mem_loc, (rtx*) 0,
 		       ADDR_REGS,
-		       GET_MODE (x), VOIDmode, 0, 0, opnum, type);
+		       GET_MODE (x), VOIDmode, 0, 0, opnum, utype);
 
-	  // this converts the outer_offset into an inner offset.
-	  address.offset = address.outer_offset;
-	  address.outer_offset = 0;
 	}
 
       return 0;
@@ -6129,7 +6131,6 @@ find_reloads_address_1 (machine_mode mode, addr_space_t as,
 			       GET_MODE (x), VOIDmode, 0, 0, opnum, type);
 		  return 1;
 		}
-	      alter_subreg(loc, true);
 	    }
 	  /* If this is a SUBREG of a pseudo-register, and the pseudo-register
 	     is larger than the class size, then reload the whole SUBREG.  */
