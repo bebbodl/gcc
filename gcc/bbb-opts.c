@@ -2765,7 +2765,10 @@ opt_reg_rename (void)
 
       /* do not use a4 if compiling baserel */
       if (flag_pic >= 3)
-	mask &= ~(1 << PIC_REG);
+	{
+	  mask &= ~(1 << PIC_REG);
+	  reusemask &= ~(1 << PIC_REG);
+	}
 
       if (!mask)
 	continue;
