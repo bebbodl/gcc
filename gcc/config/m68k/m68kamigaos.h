@@ -432,7 +432,7 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
     "%{!fbaserel:ncrt0.o%s}}}}}"
 
 #define ENDFILE_LIBNIX_SPEC \
-  "%{!ramiga-*:xcrt0.o%s}"
+  ""
 
 #define STARTFILE_CLIB2_SPEC \
   "%{resident32:nr32crt0.o%s}" \
@@ -465,7 +465,7 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
   "%{!mcrt=*:%{!noixemul:%(startfile_newlib)}} "
 #endif
 
-#if 0
+#if 1
 #undef ENDFILE_SPEC
 #define ENDFILE_SPEC ""
 #else

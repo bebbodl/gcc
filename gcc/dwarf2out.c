@@ -471,6 +471,26 @@ switch_to_eh_frame_section (bool back ATTRIBUTE_UNUSED)
 #endif /* EH_FRAME_SECTION_NAME */
 
 #if defined(TARGET_AMIGA)
+#if 1
+      switch_to_section (data_section);
+      {
+	static int init;
+	if (!init)
+	  {
+	    fputs("\t.long ___init_eh\n", asm_out_file);
+	    init = 1;
+	  };
+      }
+      fputs(
+      "\t.align 2\n" 
+      "\t__EH_FRAME_OBJECT__:\n\t.long 0\n\t.long 0\n\t.long 0\n\t.long 0\n\t.long 0\n\t.long 0\n", asm_out_file);
+      fputs("\t.stabs \"__EH_FRAME_OBJECTS__\",24,0,0,__EH_FRAME_OBJECT__\n", asm_out_file);
+
+      switch_to_section (eh_frame_section);
+      fputs(
+      "\t.align 2\n"
+      "\t__EH_FRAME_BEGIN__:\n\t.stabs \"__EH_FRAME_BEGINS__\",22,0,0,__EH_FRAME_BEGIN__\n", asm_out_file);
+#else
       fputs(
       "\t.section\t.data.__EH_FRAME_OBJECT__\n"
       "\t.align 2\n" 
@@ -487,7 +507,7 @@ switch_to_eh_frame_section (bool back ATTRIBUTE_UNUSED)
       fputs(
       "\t.text\n\t.align 2\n"
       "\t__EH_FRAME_BEGIN__:\n", asm_out_file);
-
+#endif
 #endif
     }
 

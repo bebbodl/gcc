@@ -931,7 +931,7 @@ amigaos_static_chain_rtx (const_tree decl, bool incoming ATTRIBUTE_UNUSED)
 bool
 amigaos_legitimate_src (rtx src)
 {
-  if (flag_pic < 3)
+  if (1||flag_pic < 3)
     return true;
 
   if (MEM_P(src))

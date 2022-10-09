@@ -3859,7 +3859,7 @@ void
 default_stabs_asm_out_destructor (rtx symbol ATTRIBUTE_UNUSED,
 				  int priority ATTRIBUTE_UNUSED)
 {
-#ifdef TARGET_AMIGAOS
+#if 0 // def TARGET_AMIGAOS
   fprintf (asm_out_file,
 	   "\t.section\t.list___DTOR_LIST__\n"
 	   "\t.long\t_%s\n"
@@ -3882,7 +3882,7 @@ void
 default_stabs_asm_out_constructor (rtx symbol ATTRIBUTE_UNUSED,
 				   int priority ATTRIBUTE_UNUSED)
 {
-#ifdef TARGET_AMIGAOS
+#if 0 // def TARGET_AMIGAOS
   fprintf (asm_out_file,
 	   "\t.section\t.list___CTOR_LIST__\n"
 	   "\t.long\t_%s\n"

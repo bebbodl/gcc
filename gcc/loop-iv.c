@@ -1421,7 +1421,7 @@ find_single_def_src (unsigned int regno)
     }
   if (!function_invariant_p (src))
     return NULL_RTX;
-#ifdef TARGET_AMIGAOS
+#ifdef TARGET_AMIGAOSx
   if (amiga_is_const_pic_ref (src))
     return NULL_RTX;
 #endif
