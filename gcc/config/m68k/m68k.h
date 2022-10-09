@@ -88,7 +88,9 @@ along with GCC; see the file COPYING3.  If not see
 	case u68060:							\
 	  builtin_define_std ("mc68060");				\
 	  break;							\
-									\
+	case u68080:							\
+	  builtin_define_std ("mc68080");				\
+	  break;							\
 	case u68020_60:							\
 	  builtin_define_std ("mc68060");				\
 	  /* Fall through.  */						\
@@ -1114,3 +1116,7 @@ m68k_emit_movmemsi(rtx dest, rtx src, rtx length, rtx alignment);
 
 int
 m68k_emit_setmemsi(rtx dest, rtx val, rtx length, rtx alignment);
+
+
+#define BRANCH_COST(speed_p, predictable_p) 16
+

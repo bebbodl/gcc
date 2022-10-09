@@ -266,14 +266,21 @@ make_relative_prefix_1 (const char *progname, const char *bin_prefix,
   int i, n, common;
   int needed_len;
   char *ret = NULL, *ptr, *full_progname;
-  char buf[1024], *p, *q;
+  char buf[1024], *p, *q, *t;
   DIR * d;
 
   if (progname == NULL || bin_prefix == NULL || prefix == NULL)
     return NULL;
 
+#ifdef __amiga__
+//printf("prog=<%s> bin_prefix=<%s> prefix=<%s>\t", progname, bin_prefix, prefix);
+#endif
+
   buf[0] = 0;
-#ifdef __MSYS__
+#if defined(__amiga__)
+  strcpy(buf, "GCC:");
+  n = strlen("GCC:");
+#elif defined(__MSYS__)
   n = GetModuleFileNameA(0, buf, 1023);
 #elif defined(__MACH__)
   n = 1022;
@@ -291,7 +298,7 @@ make_relative_prefix_1 (const char *progname, const char *bin_prefix,
     buf[n] = 0;
 
   //puts(buf);
-
+#if !defined(__amiga__)
   buf[1023] = 0;
   for (p = buf; *p; ++p)
     if (*p == '\\')
@@ -306,24 +313,58 @@ make_relative_prefix_1 (const char *progname, const char *bin_prefix,
 	    break;
       }
   }
-
+#endif
   // find common path in bin_prefix and prefix
   for (p = bin_prefix, q = prefix; *p && *p == *q; ++p, ++q)
     {}
 
+#if defined(__amiga__)
+  p = concat(buf, q, NULL);
+#else
   p = concat(buf, "/", q, NULL);
+#endif
+
+  // normalize
+  while ((t = strstr(p, "/../")))
+    {
+      char * r = t - 1;
+      while (r >= p && *r != '/')
+	--r;
+      if (r < p)
+	break;
+      memmove(r, t + 3, strlen(t + 3) + 1);
+    }
+
+
+#ifdef __amiga__
+//  printf("try:\t<%s>\n", p);
+  // remove trailing /
+  char * s = p + strlen(p);
+  while (s > p && *--s == '/')
+    *s = 0;
+#endif
 
   d = opendir(p);
+#ifdef __amiga__
+  if (*s != ':')
+    {
+      *++s = '/';
+      *++s = 0;
+    }
+#endif
   if (d) closedir(d);
   else
     {
+// printf("can't open dir: %s\n", p);
       free(p);
       strcpy(buf, prefix);
       buf[q - prefix] = 0;
       p = concat(buf, q, NULL);
     }
   
-  //printf("%s %s %s %s ->%s\n", progname, buf, bin_prefix, prefix, p);
+#ifdef __amiga__
+//  printf("->\t<%s>\n", p);
+#endif
 
   return p;
 }

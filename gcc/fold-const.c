@@ -8158,7 +8158,8 @@ fold_unary_ignore_overflow_loc (location_t loc, enum tree_code code,
    ARG0 and ARG1 are the NOP_STRIPed results of OP0 and OP1.
    Return the folded expression if folding is successful.  Otherwise,
    return NULL_TREE.  */
-static tree
+// static
+tree
 fold_truth_andor (location_t loc, enum tree_code code, tree type,
 		  tree arg0, tree arg1, tree op0, tree op1)
 {

@@ -2376,7 +2376,10 @@ decompose_one(rtx * loc, struct m68k_address_part *address)
 	return false;
 
       address->mem_loc = loc;
-      return decompose_one(&XEXP(x,0), 1 + address);
+      ++address;
+      if (address->mem_loc == (rtx *)-1)
+	return false;
+      return decompose_one(&XEXP(x,0), address);
 #endif
     }
   return false;
@@ -2386,6 +2389,7 @@ int decompose_mem(int reach, rtx *_x, struct m68k_address * address, int strict_
 {
   struct m68k_address_part ap_data[5];
   memset(ap_data, 0, sizeof(ap_data));
+  ap_data[4].mem_loc = (rtx *)-1;
 
   rtx x = *_x;
 
