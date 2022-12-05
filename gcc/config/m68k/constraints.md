@@ -39,7 +39,7 @@
 (define_constraint "K"
   "Integer constant that moveq can't handle."
   (and (match_code "const_int")
-       (match_test "ival < -0x80 || ival >= 0x80")))
+       (match_test "ival < -0x80 || ival >= 0x80 || TUNE_68080")))
 
 (define_constraint "L"
   "Integer constant in the range -8 @dots -1, for subq."
@@ -49,7 +49,7 @@
 (define_constraint "M"
   "Integer constant that moveq+notb can't handle."
   (and (match_code "const_int")
-       (match_test "ival < -0x100 || ival >= 0x100")))
+       (match_test "ival < -0x100 || ival >= 0x100 || TUNE_68080")))
 
 (define_constraint "N"
   "Integer constant in the range 24 @dots 31, for rotatert:SI 8 to 1 expressed as rotate."

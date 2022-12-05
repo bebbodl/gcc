@@ -1113,6 +1113,31 @@ build_decl_attribute_variant (tree ddecl, tree attribute)
   return ddecl;
 }
 
+#ifdef TARGET_AMIGA
+/**
+ * Filter __chip__ and __fast__ storage attributes from type's attributes.
+ */
+tree strip_amiga_storage_attrs(tree t1)
+{
+	tree filtered = NULL;
+
+    for (;t1; t1 = TREE_CHAIN (t1))
+	{
+    	  char const * name = IDENTIFIER_POINTER(TREE_PURPOSE (t1));
+    	  if (0 == strcmp("__chip__", name) || 0 == strcmp("__far__", name))
+    	    continue;
+
+	  tree a1 = copy_node (t1);
+	  TREE_CHAIN (a1) = filtered;
+	  filtered = a1;
+	}
+
+	return filtered;
+}
+#endif
+
+
+
 /* Return a type like TTYPE except that its TYPE_ATTRIBUTE
    is ATTRIBUTE and its qualifiers are QUALS.
 
@@ -1122,7 +1147,11 @@ tree
 build_type_attribute_qual_variant (tree otype, tree attribute, int quals)
 {
   tree ttype = otype;
-  if (! attribute_list_equal (TYPE_ATTRIBUTES (ttype), attribute))
+  if (! attribute_list_equal (TYPE_ATTRIBUTES (ttype), attribute)
+#ifdef TARGET_AMIGA
+  && ! attribute_list_equal (TYPE_ATTRIBUTES (ttype), strip_amiga_storage_attrs(attribute))
+#endif
+  )
     {
       tree ntype;
 

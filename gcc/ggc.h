@@ -67,9 +67,11 @@ struct ggc_root_tab {
 };
 #define LAST_GGC_ROOT_TAB { NULL, 0, 0, NULL, NULL }
 /* Pointers to arrays of ggc_root_tab, terminated by NULL.  */
+#ifndef __MAKE_MSYS2__
 extern const struct ggc_root_tab * const gt_ggc_rtab[];
 extern const struct ggc_root_tab * const gt_ggc_deletable_rtab[];
 extern const struct ggc_root_tab * const gt_pch_scalar_rtab[];
+#endif
 
 /* If EXPR is not NULL and previously unmarked, mark it and evaluate
    to true.  Otherwise evaluate to false.  */

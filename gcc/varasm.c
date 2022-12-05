@@ -256,7 +256,6 @@ get_unnamed_section (unsigned int flags, void (*callback) (const void *),
   sect->unnamed.callback = callback;
   sect->unnamed.data = data;
   sect->unnamed.next = unnamed_sections;
-
   unnamed_sections = sect;
   return sect;
 }
@@ -1858,7 +1857,18 @@ assemble_start_function (tree decl, const char *fnname)
 
       maybe_assemble_visibility (decl);
     }
-
+#ifdef TARGET_AMIGA
+  else if (profile_flag)
+    {
+      char *p;
+      char * sfnname = concat("__static__", fnname, "__", DECL_SOURCE_FILE (decl), "__", dump_base_name, NULL);
+      for (p = sfnname; *p; ++p)
+        if (*p < '0' || (*p > '9' && *p < '@') || (*p > 'Z' && *p != '_' && *p < 'a') || *p > 'z')
+          *p = '.';
+      default_globalize_label(asm_out_file, sfnname);
+      ASM_OUTPUT_FUNCTION_LABEL (asm_out_file, sfnname, current_function_decl);
+    }
+#endif
   if (DECL_PRESERVE_P (decl))
     targetm.asm_out.mark_decl_preserved (fnname);
 
@@ -2322,11 +2332,17 @@ assemble_variable (tree decl, int top_level ATTRIBUTE_UNUSED,
   else
     {
       /* Special-case handling of vtv comdat sections.  */
-      if (sect->named.name
+      if ((sect->common.flags & SECTION_STYLE_MASK) == SECTION_NAMED && sect->named.name
 	  && (strcmp (sect->named.name, ".vtable_map_vars") == 0))
 	handle_vtv_comdat_section (sect, decl);
       else
-	switch_to_section (sect);
+	{
+#ifdef TARGET_AMIGA
+	  if ((sect->common.flags & SECTION_STYLE_MASK) == SECTION_NAMED)
+	    sect->named.decl = decl;
+#endif
+	  switch_to_section (sect);
+	}
       if (align > BITS_PER_UNIT)
 	ASM_OUTPUT_ALIGN (asm_out_file, floor_log2 (align / BITS_PER_UNIT));
       assemble_variable_contents (decl, name, dont_output_data,
@@ -5250,7 +5266,7 @@ output_constructor_regular_field (oc_local_state *local)
      if each element has the proper size.  */
   if (local->field != NULL_TREE || local->index != NULL_TREE)
     {
-      if (fieldpos > local->total_bytes)
+      if (fieldpos >= local->total_bytes)
 	{
 	  assemble_zeros (fieldpos - local->total_bytes);
 	  local->total_bytes = fieldpos;
@@ -6692,8 +6708,11 @@ default_select_section (tree decl, int reloc,
     }
   else if (TREE_CODE (decl) == CONSTRUCTOR)
     {
-      if (! ((flag_pic && reloc)
-	     || !TREE_READONLY (decl)
+      if (! (
+#ifndef TARGET_AMIGA
+	  (flag_pic && reloc) ||
+#endif
+	     !TREE_READONLY (decl)
 	     || TREE_SIDE_EFFECTS (decl)
 	     || !TREE_CONSTANT (decl)))
 	return readonly_data_section;

@@ -107,6 +107,10 @@ a register with any other reload.  */
 #include "addresses.h"
 #include "function-abi.h"
 
+rtx current_outer_address;
+extern void m68k_set_outer_address(rtx current_outer_address);
+extern void m68k_clear_outer_address();
+
 /* True if X is a constant that can be forced into the constant pool.
    MODE is the mode of the operand, or VOIDmode if not known.  */
 #define CONST_POOL_OK_P(MODE, X)		\
@@ -5001,6 +5005,101 @@ find_reloads_address (machine_mode mode, rtx *memrefloc, rtx ad,
 
   /* The address is not valid.  We have to figure out why.  First see if
      we have an outer AND and remove it if so.  Then analyze what's inside.  */
+#ifdef TARGET_AMIGA
+  /**
+   * SBF: check the base register here, 
+   * since later no information exists, which reg is the base reg
+   * and a data reg could end up in the base reg slot.
+   * => reload the data reg
+   */
+  if (GET_CODE(ad) == PLUS)
+    {
+      extern rtx m68k_get_base_and_index(rtx ad, rtx ** regs);
+      extern bool m68k_legitimate_index_reg_p (rtx x, bool strict_p);
+      extern bool m68k_legitimate_base_reg_p (rtx x, bool strict_p);
+
+      rtx *regs[2] = {0, 0};
+      rtx offset = m68k_get_base_and_index(ad, regs);
+
+      int base_regno = -1;
+      int index_regno = -1;
+      bool done = false;
+      if (regs[0] && !m68k_legitimate_base_reg_p(*regs[0], true))
+	{
+	  rtx * base_loc = regs[0];
+	  base_regno = SUBREG_P(*base_loc) ? REGNO(SUBREG_REG(*base_loc)) : REGNO(*base_loc);
+	  if (base_regno < FIRST_PSEUDO_REGISTER
+		  || reg_renumber[base_regno] >= 0
+		  || reg_equiv_constant (base_regno) == NULL_RTX)
+	    {
+	      push_reload (*base_loc, NULL_RTX, base_loc, (rtx*) 0,
+			       ADDR_REGS,
+			       GET_MODE (ad), VOIDmode, 0, 0, opnum, type);
+	      done = true;
+	    }
+	  else
+	  if (reg_equiv_constant (base_regno) != 0)
+	    {
+	      find_reloads_address_part (reg_equiv_constant (base_regno), base_loc,
+					 ADDR_REGS,
+					 GET_MODE (ad), opnum, type, ind_levels);
+	      done = true;
+	    }
+	}
+      if (regs[1] && !m68k_legitimate_index_reg_p(*regs[1], true))
+	{
+	  rtx * index_loc = regs[1];
+	  index_regno = SUBREG_P(*index_loc) ? REGNO(SUBREG_REG(*index_loc)) : REGNO(*index_loc);
+	  if (index_regno < FIRST_PSEUDO_REGISTER
+		  || reg_renumber[index_regno] >= 0
+		  || reg_equiv_constant (index_regno) == NULL_RTX)
+	    {
+	      push_reload (*index_loc, NULL_RTX, index_loc, (rtx*) 0,
+			       GENERAL_REGS,
+			       GET_MODE (ad), VOIDmode, 0, 0, opnum, type);
+	      done = true;
+	    }
+	  else
+	  if (reg_equiv_constant (index_regno) != 0)
+	    {
+	      find_reloads_address_part (reg_equiv_constant (index_regno), index_loc,
+					 GENERAL_REGS,
+					 GET_MODE (ad), opnum, type, ind_levels);
+	      done = true;
+	    }
+	}
+      // 68000 has only support for small offsets if base and index are used.
+      if (!TARGET_68020 && offset && regs[0] && regs[1] && (GET_CODE(offset) != CONST_INT || !IN_RANGE (INTVAL (offset), -0x80, 0x80 - GET_MODE_SIZE(GET_MODE(ad)).to_constant())))
+	{
+	  push_reload (XEXP(ad, 0), NULL_RTX, &XEXP(ad, 0), (rtx*) 0,
+			   ADDR_REGS,
+			   GET_MODE (ad), VOIDmode, 0, 0, opnum, type);
+	  done = true;
+	}
+
+      if (done)
+	{
+	  /**
+	   * if this is an INPUT reload for an init insn setting a register,
+	   * clear the reg_equivs memory_loc, since that memory_loc has no reload yet.
+	   * This will hopefully trigger a new reload later...
+	   */
+	  if (opnum == 1 && GET_CODE(PATTERN(insn)) == SET)
+	    {
+	      rtx dst = SET_DEST(PATTERN(insn));
+	      if (REG_P(dst) && reg_equiv_init (ORIGINAL_REGNO(dst))
+		  && !reg_equiv_mem (ORIGINAL_REGNO(dst))
+		  && (base_regno == -1 || base_regno != ORIGINAL_REGNO(dst))
+		  && (index_regno == -1 || index_regno != ORIGINAL_REGNO(dst))
+		  )
+		reg_equiv_memory_loc(ORIGINAL_REGNO(dst)) = NULL;
+	    }
+	return 0;
+	}
+    }
+#endif
+
+
 
   if (GET_CODE (ad) == AND)
     {
@@ -5249,8 +5348,17 @@ find_reloads_address (machine_mode mode, rtx *memrefloc, rtx ad,
       return ! removed_and;
     }
 
-  return find_reloads_address_1 (mode, as, ad, 0, MEM, SCRATCH, loc,
+#ifdef TARGET_AMIGA
+  if (ind_levels)
+    current_outer_address = ad;
+#endif
+  int ret = find_reloads_address_1 (mode, as, ad, 0, MEM, SCRATCH, loc,
 				 opnum, type, ind_levels, insn);
+#ifdef TARGET_AMIGA
+  if (ind_levels)
+    current_outer_address = 0;
+#endif
+  return ret;
 }
 
 /* Find all pseudo regs appearing in AD
@@ -5892,21 +6000,25 @@ find_reloads_address_1 (machine_mode mode, addr_space_t as,
 	 an equivalent address for a pseudo that was not allocated to a hard
 	 register.  Verify that the specified address is valid and reload it
 	 into a register.
-
-	 Since we know we are going to reload this item, don't decrement for
-	 the indirection level.
+SBF: NO
+	-- Since we know we are going to reload this item, don't decrement for
+	-- the indirection level.
 
 	 Note that this is actually conservative:  it would be slightly more
 	 efficient to use the value of SPILL_INDIRECT_LEVELS from
 	 reload1.c here.  */
-
+#ifdef TARGET_AMIGA
+      m68k_set_outer_address(current_outer_address);
+#endif
       find_reloads_address (GET_MODE (x), loc, XEXP (x, 0), &XEXP (x, 0),
-			    opnum, ADDR_TYPE (type), ind_levels, insn);
+			    opnum, ADDR_TYPE (type), ind_levels ? ind_levels - 1 : 0, insn);
       push_reload (*loc, NULL_RTX, loc, (rtx*) 0,
 		   context_reg_class,
 		   GET_MODE (x), VOIDmode, 0, 0, opnum, type);
+#ifdef TARGET_AMIGA
+      m68k_clear_outer_address();
+#endif
       return 1;
-
     case REG:
       {
 	int regno = REGNO (x);
@@ -6237,6 +6349,40 @@ subst_reloads (rtx_insn *insn)
     {
       struct replacement *r = &replacements[i];
       rtx reloadreg = rld[r->what].reg_rtx;
+
+#ifdef TARGET_AMIGA
+      if (!reloadreg && !rld[r->what].optional && rld[r->what].rclass == ADDR_REGS)
+      {
+    	  rtx a = *r->where;
+    	  const char *fmt = GET_RTX_FORMAT(GET_CODE(a));
+
+    	  while (!REG_P(a) && *fmt == 'e') {
+    		  a = XEXP(a, 0);
+    		  fmt = GET_RTX_FORMAT(GET_CODE(a));
+    	  }
+
+    	  if (REG_P(a) && REGNO(a) < FIRST_PSEUDO_REGISTER) {
+    		  extern rtx_insn *old_prev;
+    		  unsigned regno = REGNO(a);
+    		  unsigned swapregno = CALL_P(insn) ? 13 : 15;
+    		  machine_mode m = GET_MODE(a);
+    		  rtx from = gen_rtx_REG(m, regno);
+    		  rtx to   = gen_rtx_REG(m, swapregno);
+
+    		  rld[r->what].optional = 1;
+
+    		  emit_insn_after (gen_swapsi(from, to), old_prev);
+
+    		  debug_rtx(insn);
+		      validate_replace_rtx_group (from, to, insn);
+    		  debug_rtx(insn);
+
+    		  emit_insn_after  (gen_swapsi(from, to), insn);
+    	  }
+      }
+#endif
+
+
       if (reloadreg)
 	{
 #ifdef DEBUG_RELOAD
@@ -6289,7 +6435,13 @@ subst_reloads (rtx_insn *insn)
 	}
       /* If reload got no reg and isn't optional, something's wrong.  */
       else
-	gcc_assert (rld[r->what].optional);
+      {
+    	  if (!rld[r->what].optional) {
+    		  debug_rtx(insn);
+    		  fprintf(stderr, "no free registers left\n");
+		  gcc_assert (rld[r->what].optional);
+    	  }
+      }
     }
 }
 

@@ -1,11 +1,62 @@
-LIB1ASMSRC = m68k/lb1sf68.S
-LIB1ASMFUNCS = _mulsi3 _udivsi3 _divsi3 _umodsi3 _modsi3 \
-   _double _float _floatex \
-   _eqdf2 _nedf2 _gtdf2 _gedf2 _ltdf2 _ledf2 \
-   _eqsf2 _nesf2 _gtsf2 _gesf2 _ltsf2 _lesf2
+#
+#LIB1ASMSRC = m68k/lb1sf68.S
+#LIB1ASMFUNCS = _mulsi3 _udivsi3 _divsi3 _umodsi3 _modsi3 \
+#   _double _float _floatex \
+#   _eqdf2 _nedf2 _gtdf2 _gedf2 _ltdf2 _ledf2 \
+#   _eqsf2 _nesf2 _gtsf2 _gesf2 _ltsf2 _lesf2
+#
 
-LIB2ADD = $(srcdir)/config/m68k/fpgnulib.c xfgnulib.c
+LIB2ADD +=  xfpgnulib.c xfpgnulib__unordsf2.c xfpgnulib__unorddf2.c \
+	xfpgnulib__floatunsidf.c xfpgnulib__floatsidf.c xfpgnulib__floatunsisf.c \
+	xfpgnulib__floatsisf.c xfpgnulib__extendsfdf2.c xfpgnulib__truncdfsf2.c \
+	xfpgnulib__fixdfsi.c xfpgnulib__fixsfsi.c xfpgnulib__cmpxf2.c
 
-xfgnulib.c: $(srcdir)/config/m68k/fpgnulib.c
-	echo '#define EXTFLOAT' > xfgnulib.c
-	cat $< >> xfgnulib.c
+xfpgnulib__unordsf2.c: $(srcdir)/config/m68k/fpgnulib.c
+	echo '#define __UNORDSF2' > xfpgnulib__unordsf2.c
+	cat $< >> xfpgnulib__unordsf2.c
+
+xfpgnulib__unorddf2.c: $(srcdir)/config/m68k/fpgnulib.c
+	echo '#define __UNORDDF2' > xfpgnulib__unorddf2.c
+	cat $< >> xfpgnulib__unorddf2.c
+
+xfpgnulib__floatunsidf.c: $(srcdir)/config/m68k/fpgnulib.c
+	echo '#define __FLOATUNSIDF' > xfpgnulib__floatunsidf.c
+	cat $< >> xfpgnulib__floatunsidf.c
+
+xfpgnulib__floatsidf.c: $(srcdir)/config/m68k/fpgnulib.c
+	echo '#define __FLOATSIDF' > xfpgnulib__floatsidf.c
+	cat $< >> xfpgnulib__floatsidf.c
+
+xfpgnulib__floatunsisf.c: $(srcdir)/config/m68k/fpgnulib.c
+	echo '#define __FLOATUNSISF' > xfpgnulib__floatunsisf.c
+	cat $< >> xfpgnulib__floatunsisf.c
+
+xfpgnulib__floatsisf.c: $(srcdir)/config/m68k/fpgnulib.c
+	echo '#define __FLOATSISF' > xfpgnulib__floatsisf.c
+	cat $< >> xfpgnulib__floatsisf.c
+
+xfpgnulib__extendsfdf2.c: $(srcdir)/config/m68k/fpgnulib.c
+	echo '#define __EXTENDSFDF2' > xfpgnulib__extendsfdf2.c
+	cat $< >> xfpgnulib__extendsfdf2.c
+
+xfpgnulib__truncdfsf2.c: $(srcdir)/config/m68k/fpgnulib.c
+	echo '#define __TRUNCDFSF2' > xfpgnulib__truncdfsf2.c
+	cat $< >> xfpgnulib__truncdfsf2.c
+
+xfpgnulib__fixdfsi.c: $(srcdir)/config/m68k/fpgnulib.c
+	echo '#define __FIXDFSI' > xfpgnulib__fixdfsi.c
+	cat $< >> xfpgnulib__fixdfsi.c
+
+xfpgnulib__fixsfsi.c: $(srcdir)/config/m68k/fpgnulib.c
+	echo '#define __FIXSFSI' > xfpgnulib__fixsfsi.c
+	cat $< >> xfpgnulib__fixsfsi.c
+
+xfpgnulib.c: $(srcdir)/config/m68k/fpgnulib.c
+	echo '#define EXTFLOAT' > xfpgnulib.c
+	cat $< >> xfpgnulib.c
+
+xfpgnulib__cmpxf2.c: $(srcdir)/config/m68k/fpgnulib.c
+	echo '#define EXTFLOAT' > xfpgnulib__cmpxf2.c
+	echo '#define EXTFLOATCMP' >> xfpgnulib__cmpxf2.c
+	cat $< >> xfpgnulib__cmpxf2.c
+	

@@ -1896,8 +1896,14 @@ reg_overlap_mentioned_p (const_rtx x, const_rtx in)
 	return 0;
       }
 
+    case SET:
+      return reg_overlap_mentioned_p (XEXP(x, 0), in) || reg_overlap_mentioned_p (XEXP(x, 1), in);
+
     default:
-      gcc_assert (CONSTANT_P (x));
+
+      if (!CONSTANT_P (x))
+	debug_rtx(x);
+//      gcc_assert (CONSTANT_P (x));
       return 0;
     }
 }

@@ -40,7 +40,11 @@ lto_dump_OBJS = $(LTO_DUMP_OBJS)
 #endif
 
 # Rules
-
+ifeq (,$(DESTDIR))
+XDIR = $(bindir)
+else
+XDIR = $(DESTDIR)/$(bindir)
+endif
 # These hooks are used by the main GCC Makefile.  Consult that
 # Makefile for documentation.
 lto.all.cross: $(LTO_EXE) $(LTO_DUMP_EXE)
@@ -48,6 +52,8 @@ lto.start.encap: $(LTO_EXE) $(LTO_DUMP_EXE)
 lto.rest.encap:
 lto.tags:
 lto.install-common: installdirs
+	echo x$(DESTDIR)y 
+	echo x$(bindir)y 
 	$(INSTALL_PROGRAM) $(LTO_DUMP_EXE) \
 	$(DESTDIR)$(bindir)/$(LTO_DUMP_INSTALL_NAME)$(exeext)
 

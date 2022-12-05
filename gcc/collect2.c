@@ -1291,6 +1291,8 @@ main (int argc, char **argv)
 		  /* Do not pass LTO flag to the linker. */
 		  ld1--;
 		  ld2--;
+
+		  lto_mode = LTO_MODE_LTO;
 #else
 		  error ("LTO support has not been enabled in this "
 			 "configuration");
@@ -1398,6 +1400,11 @@ main (int argc, char **argv)
 		    add_to_list (&static_libs, s);
 	      }
 #endif
+	      /* begin-GG-local: dynamic libraries */
+	      #ifdef COLLECT2_LIBNAME_HOOK
+	      	      COLLECT2_LIBNAME_HOOK(arg);
+	      #endif
+	      /* end-GG-local */
 	      break;
 
 #ifdef COLLECT_EXPORT_LIST
@@ -1500,6 +1507,11 @@ main (int argc, char **argv)
 		add_to_list (&static_libs, arg);
 	    }
 #endif
+	  /* begin-GG-local: dynamic libraries */
+#ifdef COLLECT2_LIBNAME_HOOK
+	  	  COLLECT2_LIBNAME_HOOK(arg);
+#endif
+	  /* end-GG-local */
 	}
     }
 
@@ -1620,6 +1632,11 @@ main (int argc, char **argv)
 
       fprintf (stderr, "\n");
     }
+  /* begin-GG-local: dynamic libraries */
+#ifdef COLLECT2_PRELINK_HOOK
+    COLLECT2_PRELINK_HOOK(ld1_argv, &strip_flag);
+#endif
+  /* end-GG-local */
 
   /* Load the program, searching all libraries and attempting to provide
      undefined symbols from repository information.
@@ -1639,7 +1656,7 @@ main (int argc, char **argv)
        expect the relevant tables to be dragged together with their associated
        functions from precise cross reference insertions by the compiler.  */
 
-    if (early_exit || ld1_filter != SCAN_NOTHING)
+    if (early_exit || (ld1_filter != SCAN_NOTHING && lto_mode != LTO_MODE_LTO))
       do_link (ld1_argv);
 
     if (early_exit)
@@ -1658,6 +1675,8 @@ main (int argc, char **argv)
       }
   }
 
+  /* begin-GG-local: dynamic libraries */
+#ifndef COLLECT2_POSTLINK_HOOK
   /* Unless we have done it all already, examine the namelist and search for
      static constructors and destructors to call.  Write the constructor and
      destructor tables to a .s file and reload.  */
@@ -1684,6 +1703,10 @@ main (int argc, char **argv)
 				   frame_tables.number),
                          frame_tables.number);
     }
+#else /* COLLECT2_POSTLINK_HOOK */
+  COLLECT2_POSTLINK_HOOK(output_file);
+#endif
+/* end-GG-local */
 
   /* If the scan exposed nothing of special interest, there's no need to
      generate the glue code and relink so return now.  */
@@ -1723,6 +1746,11 @@ main (int argc, char **argv)
       maybe_unlink (export_file);
 #endif
       post_ld_pass (/*temp_file*/false);
+      /* begin-GG-local: dynamic libraries */
+#ifdef COLLECT2_EXTRA_CLEANUP
+            COLLECT2_EXTRA_CLEANUP();
+#endif
+      /* end-GG-local */
       return 0;
     }
 
@@ -1821,6 +1849,11 @@ main (int argc, char **argv)
   scan_prog_file (output_file, PASS_SECOND, SCAN_ALL);
 #endif
 
+  /* begin-GG-local: dynamic libraries */
+#ifdef COLLECT2_EXTRA_CLEANUP
+    COLLECT2_EXTRA_CLEANUP();
+#endif
+  /* end-GG-local */
   return 0;
 }
 

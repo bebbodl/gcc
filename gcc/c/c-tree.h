@@ -498,6 +498,10 @@ struct c_type_name {
   struct c_declspecs *specs;
   /* The declarator.  */
   struct c_declarator *declarator;
+#ifdef TARGET_AMIGA
+  /* The optional asm spec to specify the register. */
+  tree asmspec;
+#endif
 };
 
 /* A parameter.  */
@@ -510,6 +514,10 @@ struct c_parm {
   struct c_declarator *declarator;
   /* The location of the parameter.  */
   location_t loc;
+#ifdef TARGET_AMIGA
+  /* The optional asm spec to specify the register. */
+  tree asmspec;
+#endif
 };
 
 /* Used when parsing an enum.  Initialized by start_enum.  */

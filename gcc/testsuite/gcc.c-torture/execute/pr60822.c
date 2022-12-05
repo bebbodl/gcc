@@ -12,6 +12,9 @@ Avg(struct X *p, int s)
     return (s * (long long)(p->a + p->b)) >> 17;
 }
 
+#if defined(__baserel__) && !defined(__baserel32__)
+__far
+#endif
 struct X x;
 
 int main()

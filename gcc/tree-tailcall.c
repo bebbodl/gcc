@@ -25,6 +25,8 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree.h"
 #include "gimple.h"
 #include "cfghooks.h"
+#include "stringpool.h"
+#include "attribs.h"
 #include "tree-pass.h"
 #include "ssa.h"
 #include "cgraph.h"
@@ -410,6 +412,42 @@ propagate_through_phis (tree var, edge e)
 static live_vars_map *live_vars;
 static vec<bitmap_head> live_vars_vec;
 
+/**
+ * Return true if register params are used.
+ *
+ * The Amiga implementation is also checking if only scratch regs d0/d1/a0/a1 are used.
+ */
+static
+bool func_is_using_regparms(const_tree func)
+{
+#ifdef TARGET_AMIGA
+  tree attrs = TYPE_ATTRIBUTES(TREE_TYPE(func));
+  if (attrs)
+    {
+      tree attr;
+      if (0 != (attr = lookup_attribute ("asmregs", attrs)))
+	{
+	  // this is a string containing all register names like "d0a2d3a4"
+	  char const * p = IDENTIFIER_POINTER(TREE_VALUE(attr));
+	  while (*p)
+	    {
+	      if (*p >= '2' && *p <= '7')
+		return true;
+	      ++p;
+	    }
+	}
+      if (0 != (attr = lookup_attribute ("regparm", attrs)))
+	return TREE_INT_CST_LOW(TREE_VALUE(TREE_VALUE(attr))) > 2;
+      if (amigaos_regparm > 2 && !lookup_attribute ("stkparm", attrs))
+	return true;
+    }
+  else if (amigaos_regparm > 2)
+    return true;
+#endif
+  return false;
+}
+
+
 /* Finds tailcalls falling into basic block BB. The list of found tailcalls is
    added to the start of RET.  */
 
@@ -529,6 +567,10 @@ find_tail_calls (basic_block bb, struct tailcall **ret)
   /* We found the call, check whether it is suitable.  */
   tail_recursion = false;
   func = gimple_call_fndecl (call);
+
+  if (func && func_is_using_regparms(func))
+    return;
+
   if (func
       && !fndecl_built_in_p (func)
       && recursive_call_p (current_function_decl, func))

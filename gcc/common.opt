@@ -1648,6 +1648,10 @@ floop-nest-optimize
 Common Report Var(flag_loop_nest_optimize) Optimization
 Enable the loop nest optimizer.
 
+floop-size-optimize
+Common Report Var(flag_loop_size_optimize) Optimization Init(-1)
+Enable loop for size optimization.
+
 fstrict-volatile-bitfields
 Common Report Var(flag_strict_volatile_bitfields) Init(-1) Optimization
 Force bitfield accesses to match their type width.
@@ -2652,7 +2656,7 @@ EnumValue
 Enum(tls_model) String(local-exec) Value(TLS_MODEL_LOCAL_EXEC)
 
 ftoplevel-reorder
-Common Report Var(flag_toplevel_reorder) Init(2) Optimization
+Common Report Var(flag_toplevel_reorder) Init(0) Optimization
 Reorder top level functions, variables, and asms.
 
 ftracer

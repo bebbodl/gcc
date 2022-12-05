@@ -43,6 +43,9 @@ EnumValue
 Enum(target_device) String(68060) Value(m68060)
 
 EnumValue
+Enum(target_device) String(68080) Value(m68080)
+
+EnumValue
 Enum(target_device) String(68302) Value(m68302)
 
 EnumValue
@@ -380,6 +383,9 @@ EnumValue
 Enum(uarch_type) String(68020-60) Value(u68020_60)
 
 EnumValue
+Enum(uarch_type) String(68020-80) Value(u68020_80)
+
+EnumValue
 Enum(uarch_type) String(68030) Value(u68030)
 
 EnumValue
@@ -387,6 +393,9 @@ Enum(uarch_type) String(68040) Value(u68040)
 
 EnumValue
 Enum(uarch_type) String(68060) Value(u68060)
+
+EnumValue
+Enum(uarch_type) String(68080) Value(u68080)
 
 EnumValue
 Enum(uarch_type) String(cpu32) Value(ucpu32)
@@ -429,17 +438,20 @@ EnumValue
 Enum(m68k_isa) String(68060) Value(5)
 
 EnumValue
-Enum(m68k_isa) String(cpu32) Value(6)
+Enum(m68k_isa) String(68080) Value(6)
 
 EnumValue
-Enum(m68k_isa) String(isaa) Value(7)
+Enum(m68k_isa) String(cpu32) Value(7)
 
 EnumValue
-Enum(m68k_isa) String(isaaplus) Value(8)
+Enum(m68k_isa) String(isaa) Value(8)
 
 EnumValue
-Enum(m68k_isa) String(isab) Value(9)
+Enum(m68k_isa) String(isaaplus) Value(9)
 
 EnumValue
-Enum(m68k_isa) String(isac) Value(10)
+Enum(m68k_isa) String(isab) Value(10)
+
+EnumValue
+Enum(m68k_isa) String(isac) Value(11)
 

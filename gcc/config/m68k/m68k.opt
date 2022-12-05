@@ -77,6 +77,10 @@ m68060
 Target RejectNegative Alias(mcpu=, 68060)
 Generate code for a 68060.
 
+m68080
+Target RejectNegative Alias(mcpu=, 68080)
+Generate code for a 68080.
+
 m68302
 Target RejectNegative Alias(mcpu=, 68302)
 Generate code for a 68302.

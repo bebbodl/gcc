@@ -2815,6 +2815,10 @@ tree_conflicts_with_clobbers_p (tree t, HARD_REG_SET *clobbered_regs)
 {
   /* Conflicts between asm-declared register variables and the clobber
      list are not allowed.  */
+  /*
+   * SBF: Why?
+   */
+#ifndef TARGET_AMIGA
   tree overlap = tree_overlaps_hard_reg_set (t, clobbered_regs);
 
   if (overlap)
@@ -2828,7 +2832,7 @@ tree_conflicts_with_clobbers_p (tree t, HARD_REG_SET *clobbered_regs)
       DECL_REGISTER (overlap) = 0;
       return true;
     }
-
+#endif
   return false;
 }
 
@@ -3461,10 +3465,16 @@ expand_asm_stmt (gasm *stmt)
 		  internal_error ("%<asm%> clobber conflict with "
 				  "output operand");
 
+  /**
+   * SBF: Why?
+  */
+#ifndef TARGET_AMIGA
+
 	      for (unsigned k = 0; k < ninputs - ninout; ++k)
 		if (reg_overlap_mentioned_p (clobbered_reg, input_rvec[k]))
 		  internal_error ("%<asm%> clobber conflict with "
 				  "input operand");
+#endif
 	    }
 
 	  XVECEXP (body, 0, i++) = gen_rtx_CLOBBER (VOIDmode, clobbered_reg);

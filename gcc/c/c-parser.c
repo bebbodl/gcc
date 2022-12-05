@@ -4409,9 +4409,28 @@ c_parser_parameter_declaration (c_parser *parser, tree attrs,
 			  : start_loc);
   location_t param_loc = make_location (caret_loc, start_loc, end_loc);
 
-  return build_c_parm (specs, chainon (postfix_attrs, prefix_attrs),
-		       declarator, param_loc);
+  /**
+   * SBF: Add support for __asm("xy") register spec.
+   */
+#ifdef TARGET_AMIGA
+  tree asmspec = NULL_TREE;
+  if (c_parser_next_token_is_keyword (parser, RID_ASM))
+    {
+      asmspec = c_parser_simple_asm_expr (parser);
+//	printf("asmspec: %s\n", TREE_STRING_POINTER(asmspec));
+    }
+#endif
+  if (c_parser_next_token_is_keyword (parser, RID_ATTRIBUTE))
+    postfix_attrs = c_parser_attributes (parser);
+
+  struct c_parm * cparm = build_c_parm (specs, chainon (postfix_attrs, prefix_attrs),
+					       declarator, param_loc);
+#ifdef TARGET_AMIGA
+  cparm->asmspec = asmspec;
+#endif
+  return cparm;
 }
+
 
 /* Parse a string literal in an asm expression.  It should not be
    translated, and wide string literals are an error although
@@ -4443,13 +4462,20 @@ c_parser_asm_string_literal (c_parser *parser)
 static tree
 c_parser_simple_asm_expr (c_parser *parser)
 {
+  extern int in_assembler_directive;
   tree str;
   gcc_assert (c_parser_next_token_is_keyword (parser, RID_ASM));
   c_parser_consume_token (parser);
   matching_parens parens;
   if (!parens.require_open (parser))
     return NULL_TREE;
+
+  // SBF: set in_assembler_directive to enable multi-line strings. And yes, it's a HACK.
+  in_assembler_directive = 1;
   str = c_parser_asm_string_literal (parser);
+  // SBF: in_assembler_directive disabled
+  in_assembler_directive = 0;
+
   if (!parens.require_close (parser))
     {
       c_parser_skip_until_found (parser, CPP_CLOSE_PAREN, NULL);

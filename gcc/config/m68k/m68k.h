@@ -204,7 +204,11 @@ along with GCC; see the file COPYING3.  If not see
 #define INT_OP_DC	3	/* dc.b, dc.w, dc.l */
 
 /* Set the default.  */
+#ifndef TARGET_AMIGAOS_VASM
 #define INT_OP_GROUP INT_OP_DOT_WORD
+#else
+#define INT_OP_GROUP INT_OP_DC
+#endif
 
 /* Bit values used by m68k-devices.def to identify processor capabilities.  */
 #define FL_BITFIELD  (1 << 0)    /* Support bitfield instructions.  */
@@ -226,12 +230,14 @@ along with GCC; see the file COPYING3.  If not see
 #define FL_ISA_C     (1 << 16)
 #define FL_FIDOA     (1 << 17)
 #define FL_CAS	     (1 << 18)	/* Support cas insn.  */
+#define FL_ISA_68080 (1 << 19)
 #define FL_MMU 	     0   /* Used by multilib machinery.  */
 #define FL_UCLINUX   0   /* Used by multilib machinery.  */
 
 #define TARGET_68010		((m68k_cpu_flags & FL_ISA_68010) != 0)
 #define TARGET_68020		((m68k_cpu_flags & FL_ISA_68020) != 0)
 #define TARGET_68040		((m68k_cpu_flags & FL_ISA_68040) != 0)
+#define TARGET_68080		((m68k_cpu_flags & FL_ISA_68080) != 0)
 #define TARGET_COLDFIRE		((m68k_cpu_flags & FL_COLDFIRE) != 0)
 #define TARGET_COLDFIRE_FPU	(m68k_fpu == FPUTYPE_COLDFIRE)
 #define TARGET_68881		(m68k_fpu == FPUTYPE_68881)
@@ -261,6 +267,7 @@ along with GCC; see the file COPYING3.  If not see
 			 || m68k_tune == u68020_60)
 #define TUNE_68060	(m68k_tune == u68060 || m68k_tune == u68020_60)
 #define TUNE_68040_60	(TUNE_68040 || TUNE_68060)
+#define TUNE_68080	(m68k_tune == u68080 || m68k_tune == u68020_80)
 #define TUNE_CPU32	(m68k_tune == ucpu32)
 #define TUNE_CFV1       (m68k_tune == ucfv1)
 #define TUNE_CFV2	(m68k_tune == ucfv2)
@@ -380,7 +387,6 @@ along with GCC; see the file COPYING3.  If not see
   16, 17, 18, 19, 20, 21, 22, 23\
 }
 
-
 /* A C expression that is nonzero if hard register NEW_REG can be
    considered for use as a rename register for OLD_REG register.  */
 
@@ -418,8 +424,8 @@ along with GCC; see the file COPYING3.  If not see
 /* The m68k has three kinds of registers, so eight classes would be
    a complete set.  One of them is not needed.  */
 enum reg_class {
-  NO_REGS, DATA_REGS,
-  ADDR_REGS, FP_REGS,
+  NO_REGS, DATA_REGS, D0_REGS,
+  ADDR_REGS, A0_REGS, FP_REGS,
   GENERAL_REGS, DATA_OR_FP_REGS,
   ADDR_OR_FP_REGS, ALL_REGS,
   LIM_REG_CLASSES };
@@ -427,8 +433,8 @@ enum reg_class {
 #define N_REG_CLASSES (int) LIM_REG_CLASSES
 
 #define REG_CLASS_NAMES \
- { "NO_REGS", "DATA_REGS",              \
-   "ADDR_REGS", "FP_REGS",              \
+ { "NO_REGS", "DATA_REGS", "D0_REGS"              \
+   "ADDR_REGS", "A0_REGS", "FP_REGS",              \
    "GENERAL_REGS", "DATA_OR_FP_REGS",   \
    "ADDR_OR_FP_REGS", "ALL_REGS" }
 
@@ -436,7 +442,9 @@ enum reg_class {
 {					\
   {0x00000000},  /* NO_REGS */		\
   {0x000000ff},  /* DATA_REGS */	\
+  {0x00000001},  /* D0_REGS */	\
   {0x0100ff00},  /* ADDR_REGS */	\
+  {0x00000100},  /* A0_REGS */	\
   {0x00ff0000},  /* FP_REGS */		\
   {0x0100ffff},  /* GENERAL_REGS */	\
   {0x00ff00ff},  /* DATA_OR_FP_REGS */	\
@@ -589,11 +597,11 @@ __transfer_from_trampoline ()					\
 
 #define REGNO_OK_FOR_INDEX_P(REGNO)			\
   (INT_REGNO_P (REGNO)					\
-   || INT_REGNO_P (reg_renumber[REGNO]))
+   || (reg_renumber && INT_REGNO_P (reg_renumber[REGNO])))
 
 #define REGNO_OK_FOR_BASE_P(REGNO)			\
   (ADDRESS_REGNO_P (REGNO)				\
-   || ADDRESS_REGNO_P (reg_renumber[REGNO]))
+   || (reg_renumber && ADDRESS_REGNO_P (reg_renumber[REGNO])))
 
 #define REGNO_OK_FOR_INDEX_NONSTRICT_P(REGNO)		\
   (INT_REGNO_P (REGNO)					\
@@ -671,8 +679,48 @@ __transfer_from_trampoline ()					\
 #define FUNCTION_MODE QImode
 
 
+#ifdef TARGET_AMIGAOS_VASM
+#define ASM_OUTPUT_ASCII(MYFILE, MYSTRING, MYLENGTH) \
+  do {                                                                        \
+    FILE *_hide_asm_out_file = (MYFILE);                                      \
+    const unsigned char *_hide_p = (const unsigned char *) (MYSTRING);        \
+    int _hide_thissize = (MYLENGTH);                                          \
+    {                                                                         \
+      FILE *asm_out_file = _hide_asm_out_file;                                \
+      const unsigned char *p = _hide_p;                                       \
+      int thissize = _hide_thissize;                                          \
+      int i;                                                                  \
+      fprintf (asm_out_file, "\tdc.b \"");                                    \
+                                                                              \
+      for (i = 0; i < thissize; i++)                                          \
+        {                                                                     \
+          int c = p[i];                                                       \
+          if (c == '\"' || c == '\\')                                         \
+            putc ('\\', asm_out_file);                                        \
+          if (ISPRINT (c))                                                    \
+            putc (c, asm_out_file);                                           \
+          else                                                                \
+            {                                                                 \
+              fprintf (asm_out_file, "\\%o", c);                              \
+              /* After an octal-escape, if a digit follows,                   \
+                 terminate one string constant and start another.             \
+                 The VAX assembler fails to stop reading the escape           \
+                 after three digits, so this is the only way we               \
+                 can get it to parse the data properly.  */                   \
+              if (i < thissize - 1 && ISDIGIT (p[i + 1]))                     \
+                fprintf (asm_out_file, "\"\n\tdc.b \"");                      \
+          }                                                                   \
+        }                                                                     \
+      fprintf (asm_out_file, "\"\n");                                         \
+    }                                                                         \
+  }                                                                           \
+  while (0)
+#endif
+
+
 /* Control the assembler format that we output.  */
 
+#ifndef TARGET_AMIGAOS_VASM
 #define ASM_APP_ON "#APP\n"
 #define ASM_APP_OFF "#NO_APP\n"
 #define TEXT_SECTION_ASM_OP "\t.text"
@@ -682,6 +730,17 @@ __transfer_from_trampoline ()					\
 #define LOCAL_LABEL_PREFIX ""
 #define USER_LABEL_PREFIX "_"
 #define IMMEDIATE_PREFIX "#"
+#else
+#define ASM_APP_ON ""
+#define ASM_APP_OFF ""
+#define TEXT_SECTION_ASM_OP "\tsection .text"
+#define DATA_SECTION_ASM_OP "\tsection .data"
+#define GLOBAL_ASM_OP "\txdef\t"
+#define REGISTER_PREFIX ""
+#define LOCAL_LABEL_PREFIX "_."
+#define USER_LABEL_PREFIX "_"
+#define IMMEDIATE_PREFIX "#"
+#endif
 
 #define REGISTER_NAMES \
 {REGISTER_PREFIX"d0", REGISTER_PREFIX"d1", REGISTER_PREFIX"d2",	\
@@ -801,6 +860,7 @@ __transfer_from_trampoline ()					\
 
 /* The m68k does not use absolute case-vectors, but we must define this macro
    anyway.  */
+#ifndef TARGET_AMIGAOS_VASM
 #define ASM_OUTPUT_ADDR_VEC_ELT(FILE, VALUE)  \
   asm_fprintf (FILE, "\t.long %LL%d\n", VALUE)
 
@@ -810,6 +870,12 @@ __transfer_from_trampoline ()					\
 	       ? "\t.long %LL%d-%LL%d\n"			\
 	       : "\t.word %LL%d-%LL%d\n",			\
 	       VALUE, REL)
+#else
+#define ASM_OUTPUT_ADDR_VEC_ELT(FILE, VALUE)	\
+ asm_fprintf (FILE, "\tdc.l %LL%d\n", VALUE)
+#define ASM_OUTPUT_ADDR_DIFF_ELT(FILE, BODY, VALUE, REL)  \
+  asm_fprintf (FILE, "\tdc.w %LL%d-%LL%d\n", VALUE, REL)
+#endif
 
 /* We don't have a way to align to more than a two-byte boundary, so do the
    best we can and don't complain.  */
@@ -819,13 +885,24 @@ __transfer_from_trampoline ()					\
 
 #ifdef HAVE_GAS_BALIGN_AND_P2ALIGN
 /* Use "move.l %a4,%a4" to advance within code.  */
+#ifndef TARGET_AMIGAOS_VASM
 #define ASM_OUTPUT_ALIGN_WITH_NOP(FILE,LOG)			\
   if ((LOG) > 0)						\
     fprintf ((FILE), "\t.balignw %u,0x284c\n", 1 << (LOG));
 #endif
+#else
+#define ASM_OUTPUT_ALIGN_WITH_NOP(FILE,LOG)			\
+  if ((LOG) > 0)						\
+    fprintf ((FILE), "\tcnop 0,%u\n", 1 << (LOG));
+#endif
 
+#ifndef TARGET_AMIGAOS_VASM
 #define ASM_OUTPUT_SKIP(FILE,SIZE)  \
   fprintf (FILE, "\t.skip %u\n", (int)(SIZE))
+#else
+#define ASM_OUTPUT_SKIP(FILE,SIZE)  \
+  fprintf (FILE, "\tds.b %u\n", (int)(SIZE))
+#endif
 
 #define ASM_OUTPUT_COMMON(FILE, NAME, SIZE, ROUNDED)  \
 ( fputs (".comm ", (FILE)),			\
@@ -917,3 +994,8 @@ extern int m68k_sched_address_bypass_p (rtx_insn *, rtx_insn *);
 extern int m68k_sched_indexed_address_bypass_p (rtx_insn *, rtx_insn *);
 
 #define CPU_UNITS_QUERY 1
+
+#if 1
+extern void default_stabs_asm_out_constructor (rtx, int);
+extern void default_stabs_asm_out_destructor (rtx, int);
+#endif
