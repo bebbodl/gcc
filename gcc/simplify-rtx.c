@@ -4449,6 +4449,58 @@ simplify_const_binary_operation (enum rtx_code code, machine_mode mode,
       return immed_wide_int_const (result, int_mode);
     }
 
+#ifdef TARGET_AMIGA
+  /**
+   * Subtraction of two pic refs is be possible
+   * if those refer to the same symbol.
+   */
+  if (mode == SImode && code == MINUS
+      && amiga_is_const_pic_ref(op0)
+      && amiga_is_const_pic_ref(op1))
+    {
+      rtx a = op0;
+      rtx b = op1;
+      while (GET_CODE(a) == CONST) a = XEXP(a,0);
+      while (GET_CODE(b) == CONST) b = XEXP(b,0);
+      if (GET_CODE(a) == PLUS && GET_CODE(b) == PLUS
+	  && REG_P(XEXP(a,0)) && REG_P(XEXP(b,0))
+	  && REGNO(XEXP(a,0)) == REGNO(XEXP(b,0)))
+	{
+	  a = XEXP(a,1);
+	  b = XEXP(b,1);
+	  while (GET_CODE(a) == CONST) a = XEXP(a,0);
+	  while (GET_CODE(b) == CONST) b = XEXP(b,0);
+	  rtx ua = 0;
+	  rtx ub = 0;
+	  if (GET_CODE(a) == UNSPEC)
+	    {
+	      ua = a;
+	      a = GEN_INT(0);
+	    }
+	  else
+	  if (GET_CODE(a) == PLUS && GET_CODE(XEXP(a,0)) == UNSPEC)
+	    {
+	      ua = XEXP(a,0);
+	      a = XEXP(a,1);
+	    }
+	  if (GET_CODE(b) == UNSPEC)
+	    {
+	      ub = b;
+	      b = GEN_INT(0);
+	    }
+	  else
+	  if (GET_CODE(b) == PLUS && GET_CODE(XEXP(b,0)) == UNSPEC)
+	    {
+	      ub = XEXP(b,0);
+	      b = XEXP(b,1);
+	    }
+	  if (ua && ub && XVECEXP(ua,0,0) == XVECEXP(ub,0,0) &&
+	      GET_CODE(a) == CONST_INT && GET_CODE(b) == CONST_INT)
+	    return GEN_INT(INTVAL(a) - INTVAL(b));
+	}
+    }
+#endif
+
   return NULL_RTX;
 }
 

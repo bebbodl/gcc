@@ -1075,6 +1075,9 @@ libbacktrace_instrumented_alloc.la: $(libbacktrace_instrumented_alloc_la_OBJECTS
 libbacktrace_noformat.la: $(libbacktrace_noformat_la_OBJECTS) $(libbacktrace_noformat_la_DEPENDENCIES) $(EXTRA_libbacktrace_noformat_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(LINK) $(am_libbacktrace_noformat_la_rpath) $(libbacktrace_noformat_la_OBJECTS) $(libbacktrace_noformat_la_LIBADD) $(LIBS)
 
+libbacktrace.dll: libbacktrace.la
+	$(CC) $(patsubst %.lo,%.o,$(libbacktrace_la_OBJECTS) $(libbacktrace_la_LIBADD)) -shared -o $@
+
 clean-checkPROGRAMS:
 	@list='$(check_PROGRAMS)'; test -n "$$list" || exit 0; \
 	echo " rm -f" $$list; \

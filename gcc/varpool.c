@@ -298,6 +298,9 @@ varpool_node::get_constructor (void)
   struct lto_in_decl_state *decl_state
 	 = lto_get_function_in_decl_state (file_data, decl);
 
+  if (!decl_state)
+    return NULL;
+
   data = lto_get_section_data (file_data, LTO_section_function_body,
 			       name, &len, decl_state->compressed);
   if (!data)

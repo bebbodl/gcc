@@ -2398,6 +2398,29 @@ skip_pass (opt_pass *pass)
     }
 }
 
+void dump_insns(char const * name)
+{
+  rtx_insn *insn, *next;
+  fprintf(stderr, "====================================\npass: %s\n", name);
+  for (insn = get_insns(); insn; insn = next)
+    {
+      next = NEXT_INSN(insn);
+	    debug_rtx(insn);
+#if 0
+      if (NONJUMP_INSN_P (insn))
+	{
+	  rtx set= single_set (insn);
+	  if (!set)
+	    continue;
+
+	  if (amiga_is_const_pic_ref(SET_SRC(set)) && MEM_P(SET_DEST(set)))
+	    debug_rtx(insn);
+	}
+#endif
+    }
+}
+
+
 /* Execute PASS. */
 
 bool
@@ -2406,6 +2429,9 @@ execute_one_pass (opt_pass *pass)
   unsigned int todo_after = 0;
 
   bool gate_status;
+
+  if (string_bbb_opts && strchr (string_bbb_opts, 'Y'))
+    dump_insns(pass->name);
 
   /* IPA passes are executed on whole program, so cfun should be NULL.
      Other passes need function context set.  */

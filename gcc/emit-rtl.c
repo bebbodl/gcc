@@ -2307,7 +2307,11 @@ change_address_1 (rtx memref, machine_mode mode, rtx addr, int validate,
   if (validate && !lra_in_progress)
     {
       if (reload_in_progress || reload_completed)
-	gcc_assert (memory_address_addr_space_p (mode, addr, as));
+	{
+	  bool r = memory_address_addr_space_p (mode, addr, as);
+	  if (!r) debug_rtx(addr);
+	  gcc_assert (r);
+	}
       else
 	addr = memory_address_addr_space (mode, addr, as);
     }

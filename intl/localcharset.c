@@ -265,7 +265,7 @@ get_charset_aliases ()
    name.  */
 
 #ifdef STATIC
-STATIC
+//STATIC
 #endif
 const char *
 locale_charset ()

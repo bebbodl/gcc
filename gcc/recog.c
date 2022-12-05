@@ -1359,6 +1359,12 @@ memory_operand (rtx op, machine_mode mode)
   if (mode != VOIDmode && GET_MODE (op) != mode)
     return 0;
 
+#ifdef TARGET_AMIGA
+  /* SBF: allow direct mem ref to a4. */
+  if (MEM_P(op) && amiga_is_const_pic_ref(XEXP(op, 0)))
+    return true;
+#endif
+
   inner = op;
   if (GET_CODE (inner) == SUBREG)
     inner = SUBREG_REG (inner);
@@ -3311,6 +3317,7 @@ peep2_attempt (basic_block bb, rtx_insn *insn, int match_len, rtx_insn *attempt)
   /* If we are splitting an RTX_FRAME_RELATED_P insn, do not allow it to
      match more than one insn, or to be split into more than one insn.  */
   old_insn = peep2_insn_data[peep2_current].insn;
+
   if (RTX_FRAME_RELATED_P (old_insn))
     {
       bool any_note = false;

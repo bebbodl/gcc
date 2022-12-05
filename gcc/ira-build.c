@@ -2910,6 +2910,8 @@ setup_min_max_conflict_allocno_ids (void)
 	 (the reason for this is the allocnos with bigger conflict id
 	 have their range starts not smaller than allocnos with
 	 smaller ids.  */
+      if (filled_area_start > ira_max_point)
+	filled_area_start = ira_max_point;
       for (j = min; j < filled_area_start; j++)
 	last_lived[j] = i;
       filled_area_start = min;

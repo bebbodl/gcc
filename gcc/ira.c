@@ -5128,6 +5128,106 @@ move_unallocated_pseudos (void)
       }
 }
 
+
+#ifdef TARGET_AMIGA
+/**
+ * This is the partial structure from m68k.c - with all fields used here.
+ */
+extern struct m68k_frame {
+  /* Stack pointer to frame pointer offset.  */
+  HOST_WIDE_INT offset;
+
+  /* Offset of FPU registers.  */
+  HOST_WIDE_INT foffset;
+
+  /* Frame size in bytes (rounded up).  */
+  HOST_WIDE_INT size;
+
+} current_frame;
+
+/**
+ * Test a src or dst, if it needs a fix and fix it.
+ */
+static void fix_one(rtx_insn * insn, rtx * mem_loc, int opno, int size, int offset)
+{
+  rtx mem = *mem_loc;
+  if (MEM_P(mem) && GET_CODE(XEXP(mem, 0)) == PLUS
+      && REG_P(XEXP(XEXP(mem, 0), 0))
+      && REGNO(XEXP(XEXP(mem, 0), 0)) == SP_REG
+      && CONST_INT_P(XEXP(XEXP(mem, 0), 1))
+      && MEM_OFFSET_KNOWN_P (mem)
+      && MEM_EXPR (mem)
+      && MEM_OFFSET(mem).to_constant()
+      && MEM_EXPR(mem)->base.code == VAR_DECL
+      && 0 == strcmp("%sfp", (char const *)MEM_EXPR (mem)->var_decl.common.common.common.common.name->identifier.id.str)
+      )
+    {
+      int n = INTVAL(XEXP(XEXP(mem, 0), 1));
+      int m = MEM_OFFSET(mem).to_constant();
+      int add = size + offset - n + m;
+      if (add > 0)
+	{
+//	  fprintf(stderr, "add=%d, size=%d, offset=%d, n=%d, m=%d\n", add, size, offset, n, -m);
+//	  debug_rtx (insn);
+	  mem = copy_rtx_if_shared(mem);
+	  XEXP(XEXP(mem, 0), 1) = GEN_INT(n + add);
+	  *mem_loc = mem;
+//	  debug_rtx (insn);
+	}
+    }
+}
+/**
+ * This is a hack!
+ *
+ * Reload seems to fail adjusting a spill reg on stack
+ * if it is used while function args are pushed
+ * and -fomit-frame-pointer is active.
+ *
+ * since I did not manage to find the real location to fix this,
+ * I wrote this patcher, which validates the spf related offsets
+ * and fixes these.
+ */
+static void
+fix_stack_regs(rtx_insn * first)
+{
+  rtx_insn * insn;
+
+  int offset = 0;
+  int size = current_frame.offset + current_frame.size;
+
+  for (insn = first; insn; insn = NEXT_INSN (insn))
+    {
+      if (CALL_P(insn))
+	{
+	  offset = 0;
+	  continue;
+	}
+
+      if (!NONJUMP_INSN_P (insn))
+	continue;
+
+      int last_offset = offset;
+      // update the offset
+      rtx note = find_reg_note(insn, REG_ARGS_SIZE, 0);
+      if (note)
+	offset = INTVAL(XEXP(note, 0));
+
+      if (last_offset == 0)
+	continue;
+
+      rtx set = single_set(insn);
+      if (!set)
+	continue;
+
+      if (GET_CODE(set) == COMPARE)
+	set = XEXP(set, 1);
+
+      fix_one(insn, &XEXP(set, 0), 0, size, last_offset);
+      fix_one(insn, &XEXP(set, 1), 1, size, last_offset);
+    }
+}
+#endif
+
 /* If the backend knows where to allocate pseudos for hard
    register initial values, register these allocations now.  */
 static void
@@ -5532,6 +5632,10 @@ do_reload (void)
       build_insn_chain ();
 
       need_dce = reload (get_insns (), ira_conflicts_p);
+
+#ifdef TARGET_AMIGA
+      fix_stack_regs(get_insns ());
+#endif
     }
 
   timevar_pop (TV_RELOAD);

@@ -1,3 +1,6 @@
+#if defined(__baserel__) && !defined(__baserel32__)
+__far
+#endif
 char a[10] = "deadbeef";
 
 char

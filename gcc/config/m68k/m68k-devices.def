@@ -76,6 +76,7 @@ M68K_DEVICE ("68020", m68020,   "68020", "68020", 68020,    isa_20,    FL_MMU | 
 M68K_DEVICE ("68030", m68030,   "68030", "68020", 68030,    isa_20,    FL_MMU | FL_UCLINUX)
 M68K_DEVICE ("68040", m68040,   "68040", "68040", 68040,    isa_40,    FL_MMU)
 M68K_DEVICE ("68060", m68060,   "68060", "68060", 68060,    isa_40,    FL_MMU)
+M68K_DEVICE ("68080", m68080,   "68080", "68080", 68080,    isa_80,    FL_MMU)
 M68K_DEVICE ("68302", m68302,   "68302", "68000", 68000,    isa_00,    FL_MMU)
 M68K_DEVICE ("68332", m68332,   "68332", "cpu32", cpu32,    isa_cpu32, FL_MMU)
 M68K_DEVICE ("cpu32", cpu32,    "cpu32", "cpu32", cpu32,    isa_cpu32, FL_MMU)

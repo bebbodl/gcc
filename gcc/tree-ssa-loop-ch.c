@@ -62,11 +62,41 @@ should_duplicate_loop_header_p (basic_block header, struct loop *loop,
   if (optimize_loop_for_size_p (loop)
       && !loop->force_vectorize)
     {
-      if (dump_file && (dump_flags & TDF_DETAILS))
-	fprintf (dump_file,
-		 "  Not duplicating bb %i: optimizing for size.\n",
-		 header->index);
-      return false;
+#ifdef TARGET_AMIGA
+      // copy at least a tiny header
+      if (*limit == 20 && flow_bb_inside_loop_p (loop, EDGE_SUCC (header, 0)->dest))
+	{
+	
+	      // if there is a comparison: only as last expression!
+      basic_block next = EDGE_SUCC (header, 0)->dest;
+      for (bsi = gsi_start_bb (next); !gsi_end_p (bsi); gsi_next (&bsi))
+	{
+	  gimple *last = gsi_stmt (bsi);
+	  enum gimple_code code = gimple_code (last);
+	  if (code != GIMPLE_ASSIGN && bsi.ptr->next)
+	    {
+	      *limit = 0;
+	      break;
+	    }
+	}
+	if (*limit == 20)
+	  {
+          *limit = 2;
+	  if (dump_file && (dump_flags & TDF_DETAILS))
+	    fprintf (dump_file,
+		     "  Set limit to to 2 bb %i: optimizing for size.\n",
+		     header->index);
+        }
+      }
+      if (*limit == 0)
+#endif
+	{
+	  if (dump_file && (dump_flags & TDF_DETAILS))
+	    fprintf (dump_file,
+		     "  Not duplicating bb %i: optimizing for size.\n",
+		     header->index);
+	  return false;
+	}
     }
 
   gcc_assert (EDGE_COUNT (header->succs) > 0);
@@ -147,6 +177,19 @@ should_duplicate_loop_header_p (basic_block header, struct loop *loop,
 		     header->index);
 	  return false;
 	}
+
+#ifdef TARGET_AMIGA
+      enum gimple_code code = gimple_code (last);
+      if (code == GIMPLE_ASSIGN)
+	{
+	  tree rhs = gimple_assign_rhs1 (last);
+	  if (rhs->base.code == MEM_REF)
+	    return false;
+	  tree lhs = gimple_assign_lhs (last);
+	  if (lhs->base.code == MEM_REF)
+	    return false;
+	}
+#endif
 
       *limit -= estimate_num_insns (last, &eni_size_weights);
       if (*limit < 0)

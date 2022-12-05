@@ -1,0 +1,7 @@
+LIB2ADD += $(srcdir)/config/m68k/cxxglue.c 
+LIB2ADD += $(srcdir)/config/m68k/gmon.c 
+
+new_op.o: $(srcdir)/config/m68k/new_op.c
+	$(CC) $(CFLAGS) -c $< 
+
+EXTRA_PARTS=new_op.o

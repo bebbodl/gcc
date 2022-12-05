@@ -57,6 +57,7 @@ along with GCC; see the file COPYING3.  If not see
    redefs are pointless here so we can override them.  */
 
 #undef fopen 
+#undef fdopen
 #undef freopen 
 
 #define fopen(PATH, MODE) fopen_unlocked (PATH, MODE)

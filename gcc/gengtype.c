@@ -5038,6 +5038,14 @@ parse_program_options (int argc, char **argv)
 	    srcdir = optarg;
 	  else
 	    fatal ("missing source directory");
+#ifdef __CYGWIN__
+	  if (0 == strncmp("/cygdrive/", srcdir, 10))
+	    {
+	      9[(char *)srcdir] = srcdir[10];
+	      10[(char *)srcdir] = ':';
+	      srcdir += 9;
+	    }
+#endif
 	  srcdir_len = strlen (srcdir);
 	  break;
 	case 'B':		/* --backupdir */
@@ -5110,6 +5118,18 @@ input_file_by_name (const char* name)
   f->inpoutf = NULL;
   f->inpisplugin = false;
   strcpy (f->inpname, name);
+
+#ifdef __CYGWIN__
+    if (strstr(f->inpname, "/cygdrive/") == f->inpname)
+      {
+	int l = strlen(&f->inpname[11]) + 1;
+	char * p = f->inpname;
+	p[0] = p[10];
+	p[1] = ':';
+	memmove(&p[2], &p[11], l);
+      }
+#endif
+
   slot = htab_find_slot (input_file_htab, f, INSERT);
   gcc_assert (slot != NULL);
   if (*slot)

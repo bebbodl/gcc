@@ -233,6 +233,9 @@ REG_NOTE (STACK_CHECK)
    insn.  This note is a SYMBOL_REF.  */
 REG_NOTE (CALL_DECL)
 
+/* Used to track mask of the used bits.  This note is a CONST_INT.  */
+REG_NOTE (BIT_MASK)
+
 /* Indicate that a call should not be verified for control-flow consistency.
    The target address of the call is assumed as a valid address and no check
    to validate a branch to the target address is needed.  The call is marked

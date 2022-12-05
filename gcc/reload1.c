@@ -2001,9 +2001,14 @@ find_reload_regs (struct insn_chain *chain)
 	  {
 	    if (dump_file)
 	      fprintf (dump_file, "reload failure for reload %d\n", r);
+
+#ifdef TARGET_AMIGA
+	    rld[r].in = 0; // mark as optional - bbb pass will fix this later
+#else
 	    spill_failure (chain->insn, rld[r].rclass);
 	    failure = 1;
 	    return;
+#endif
 	  }
     }
 
@@ -4456,6 +4461,10 @@ fixup_eh_region_note (rtx_insn *insn, rtx_insn *prev, rtx_insn *next)
    We update these for the reloads that we perform,
    as the insns are scanned.  */
 
+#if AUTO_INC_DEC
+rtx_insn *old_prev;
+#endif
+
 static void
 reload_as_needed (int live_known)
 {
@@ -4484,7 +4493,7 @@ reload_as_needed (int live_known)
       rtx_insn *insn = chain->insn;
       rtx_insn *old_next = NEXT_INSN (insn);
 #if AUTO_INC_DEC
-      rtx_insn *old_prev = PREV_INSN (insn);
+      old_prev = PREV_INSN (insn);
 #endif
 
       if (will_delete_init_insn_p (insn))
@@ -7870,9 +7879,19 @@ do_input_reload (struct insn_chain *chain, struct reload *rl, int j)
       /* The insn might have already some references to stackslots
 	 replaced by MEMs, while reload_out_reg still names the
 	 original pseudo.  */
-      && (dead_or_set_p (insn, spill_reg_stored_to[REGNO (reg_rtx)])
-	  || rtx_equal_p (spill_reg_stored_to[REGNO (reg_rtx)], rl->out_reg)))
-    delete_output_reload (insn, j, REGNO (reg_rtx), reg_rtx);
+      && (
+/**
+ * SBF: a later reload might rely on this reload which is marked dead for now...
+ * ... then this reload is missing.
+ */
+#if 0
+	  dead_or_set_p (insn, spill_reg_stored_to[REGNO (reg_rtx)])
+	  ||
+#endif	  
+	  rtx_equal_p (spill_reg_stored_to[REGNO (reg_rtx)], rl->out_reg)))
+    {
+      delete_output_reload (insn, j, REGNO (reg_rtx), reg_rtx);
+    }
 }
 
 /* Do output reloading for reload RL, which is for the insn described by

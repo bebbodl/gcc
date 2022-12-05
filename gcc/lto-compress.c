@@ -348,7 +348,11 @@ lto_uncompression_zlib (struct lto_compression_stream *stream)
   gcc_assert (!stream->is_compression);
   timevar_push (TV_IPA_LTO_DECOMPRESS);
 
+#ifdef TARGET_AMIGA
+  while (remaining > 3)
+#else
   while (remaining > 0)
+#endif
     {
       z_stream in_stream;
       size_t out_bytes;

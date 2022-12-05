@@ -60,7 +60,8 @@ relative prefix can be found, return @code{NULL}.
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
-
+#include <sys/types.h>
+#include <dirent.h>
 #include <string.h>
 
 #include "ansidecl.h"
@@ -232,175 +233,62 @@ make_relative_prefix_1 (const char *progname, const char *bin_prefix,
   int i, n, common;
   int needed_len;
   char *ret = NULL, *ptr, *full_progname;
-  char *alloc_ptr = NULL;
+  char buf[1024], *p, *q;
+  DIR * d;
 
   if (progname == NULL || bin_prefix == NULL || prefix == NULL)
     return NULL;
 
-  /* If there is no full pathname, try to find the program by checking in each
-     of the directories specified in the PATH environment variable.  */
-  if (lbasename (progname) == progname)
-    {
-      char *temp;
-
-      temp = getenv ("PATH");
-      if (temp)
-	{
-	  char *startp, *endp, *nstore;
-	  size_t prefixlen = strlen (temp) + 1;
-	  size_t len;
-	  if (prefixlen < 2)
-	    prefixlen = 2;
-
-	  len = prefixlen + strlen (progname) + 1;
-#ifdef HAVE_HOST_EXECUTABLE_SUFFIX
-	  len += strlen (HOST_EXECUTABLE_SUFFIX);
+  buf[0] = 0;
+#ifdef __MSYS__
+  n = GetModuleFileNameA(0, buf, 1023);
+#elif defined(__MACH__)
+  n = 1022;
+  n |= _NSGetExecutablePath(buf, &n);
+#else
+  n = readlink( "/proc/self/exe", buf, 1023);
 #endif
-	  if (len < MAX_ALLOCA_SIZE)
-	    nstore = (char *) alloca (len);
-	  else
-	    alloc_ptr = nstore = (char *) malloc (len);
+  if (n < 0 || n > 1022)
+    return NULL;
+  else if (n)
+    buf[n] = 0;
 
-	  startp = endp = temp;
-	  while (1)
-	    {
-	      if (*endp == PATH_SEPARATOR || *endp == 0)
-		{
-		  if (endp == startp)
-		    {
-		      nstore[0] = '.';
-		      nstore[1] = DIR_SEPARATOR;
-		      nstore[2] = '\0';
-		    }
-		  else
-		    {
-		      memcpy (nstore, startp, endp - startp);
-		      if (! IS_DIR_SEPARATOR (endp[-1]))
-			{
-			  nstore[endp - startp] = DIR_SEPARATOR;
-			  nstore[endp - startp + 1] = 0;
-			}
-		      else
-			nstore[endp - startp] = 0;
-		    }
-		  strcat (nstore, progname);
-		  if (! access (nstore, X_OK)
-#ifdef HAVE_HOST_EXECUTABLE_SUFFIX
-                      || ! access (strcat (nstore, HOST_EXECUTABLE_SUFFIX), X_OK)
-#endif
-		      )
-		    {
-#if defined (HAVE_SYS_STAT_H) && defined (S_ISREG)
-		      struct stat st;
-		      if (stat (nstore, &st) >= 0 && S_ISREG (st.st_mode))
-#endif
-			{
-			  progname = nstore;
-			  break;
-			}
-		    }
+  //puts(buf);
 
-		  if (*endp == 0)
-		    break;
-		  endp = startp = endp + 1;
-		}
-	      else
-		endp++;
-	    }
-	}
-    }
+  buf[1023] = 0;
+  for (p = buf; *p; ++p)
+    if (*p == '\\')
+      *p = '/';
 
-  if (resolve_links)
-    full_progname = lrealpath (progname);
-  else
-    full_progname = strdup (progname);
-  if (full_progname == NULL)
-    goto bailout;
-
-  prog_dirs = split_directories (full_progname, &prog_num);
-  free (full_progname);
-  if (prog_dirs == NULL)
-    goto bailout;
-
-  bin_dirs = split_directories (bin_prefix, &bin_num);
-  if (bin_dirs == NULL)
-    goto bailout;
-
-  /* Remove the program name from comparison of directory names.  */
-  prog_num--;
-
-  /* If we are still installed in the standard location, we don't need to
-     specify relative directories.  Also, if argv[0] still doesn't contain
-     any directory specifiers after the search above, then there is not much
-     we can do.  */
-  if (prog_num == bin_num)
-    {
-      for (i = 0; i < bin_num; i++)
-	{
-	  if (strcmp (prog_dirs[i], bin_dirs[i]) != 0)
+  // remove program and bin folder
+  i = 2;
+  while (p > buf) {
+      if (*--p == '/') {
+	  *p = 0;
+	  if (--i == 0)
 	    break;
 	}
-
-      if (prog_num <= 0 || i == bin_num)
-	goto bailout;
     }
 
-  prefix_dirs = split_directories (prefix, &prefix_num);
-  if (prefix_dirs == NULL)
-    goto bailout;
+  // find common path in bin_prefix and prefix
+  for (p = bin_prefix, q = prefix; *p && *p == *q; ++p, ++q)
+    {}
 
-  /* Find how many directories are in common between bin_prefix & prefix.  */
-  n = (prefix_num < bin_num) ? prefix_num : bin_num;
-  for (common = 0; common < n; common++)
+  p = concat(buf, "/", q, 0);
+
+  d = opendir(p);
+  if (d) closedir(d);
+  else
     {
-      if (strcmp (bin_dirs[common], prefix_dirs[common]) != 0)
-	break;
+      free(p);
+      strcpy(buf, prefix);
+      buf[q - prefix] = 0;
+      p = concat(buf, q, 0);
     }
 
-  /* If there are no common directories, there can be no relative prefix.  */
-  if (common == 0)
-    goto bailout;
+  //printf("%s %s %s %s ->%s\n", progname, buf, bin_prefix, prefix, p);
 
-  /* Two passes: first figure out the size of the result string, and
-     then construct it.  */
-  needed_len = 0;
-  for (i = 0; i < prog_num; i++)
-    needed_len += strlen (prog_dirs[i]);
-  needed_len += sizeof (DIR_UP) * (bin_num - common);
-  for (i = common; i < prefix_num; i++)
-    needed_len += strlen (prefix_dirs[i]);
-  needed_len += 1; /* Trailing NUL.  */
-
-  ret = (char *) malloc (needed_len);
-  if (ret == NULL)
-    goto bailout;
-
-  /* Build up the pathnames in argv[0].  */
-  *ret = '\0';
-  for (i = 0; i < prog_num; i++)
-    strcat (ret, prog_dirs[i]);
-
-  /* Now build up the ..'s.  */
-  ptr = ret + strlen(ret);
-  for (i = common; i < bin_num; i++)
-    {
-      strcpy (ptr, DIR_UP);
-      ptr += sizeof (DIR_UP) - 1;
-      *(ptr++) = DIR_SEPARATOR;
-    }
-  *ptr = '\0';
-
-  /* Put in directories to move over to prefix.  */
-  for (i = common; i < prefix_num; i++)
-    strcat (ret, prefix_dirs[i]);
-
- bailout:
-  free_split_directories (prog_dirs);
-  free_split_directories (bin_dirs);
-  free_split_directories (prefix_dirs);
-  free (alloc_ptr);
-
-  return ret;
+  return p;
 }
 
 
