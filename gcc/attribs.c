@@ -1123,7 +1123,10 @@ tree strip_amiga_storage_attrs(tree t1)
 
     for (;t1; t1 = TREE_CHAIN (t1))
 	{
-    	  char const * name = IDENTIFIER_POINTER(TREE_PURPOSE (t1));
+    	tree pp = TREE_PURPOSE (t1);
+    	if (pp->base.code != IDENTIFIER_NODE)
+    		continue;
+    	  char const * name = IDENTIFIER_POINTER(pp);
     	  if (0 == strcmp("__chip__", name) || 0 == strcmp("__far__", name))
     	    continue;
 
