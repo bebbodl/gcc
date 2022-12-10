@@ -25,6 +25,10 @@ along with GCC; see the file COPYING3.  If not see
 #define TARGET_AMIGA 1
 #endif
 
+#ifndef __POSIX_THREADS__
+#define __POSIX_THREADS__ 0
+#endif
+
 #define HAS_INIT_SECTION
 
 #ifndef SWBEG_ASM_OP
@@ -262,6 +266,7 @@ amiga_declare_object = 0
       builtin_define ("__chip=__attribute__((__chip__))"); \
       builtin_define ("__fast=__attribute__((__fast__))"); \
       builtin_define ("__far=__attribute__((__far__))"); \
+      builtin_define ("__near=__attribute__((section(\".data\")))"); \
       builtin_define ("__saveds=__attribute__((__saveds__))"); \
       builtin_define ("__interrupt=__attribute__((__interrupt__))"); \
       builtin_define ("__stackext=__attribute__((__stackext__))"); \
@@ -270,6 +275,7 @@ amiga_declare_object = 0
       builtin_define ("__aligned=__attribute__((__aligned__(4)))"); \
       builtin_define_std ("amiga"); \
       builtin_define_std ("amigaos"); \
+      builtin_define_std ("amigaos3"); \
       builtin_define_std ("AMIGA"); \
       builtin_define_std ("MCH_AMIGA"); \
       builtin_assert ("system=amigaos"); \
@@ -281,6 +287,8 @@ amiga_declare_object = 0
     } \
       if (flag_resident) \
     builtin_define ("__resident__"); \
+      if (__POSIX_THREADS__) \
+    builtin_define ("__posix_threads__"); \
     } \
   while (0)
 
@@ -290,13 +298,42 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
 
 #endif
 
-/* put return values in FPU build in FP0 Reg */
+/* SBF: same as linux.h */
+
+/* 1 if N is a possible register number for a function value.  For
+   m68k/SVR4 allow d0, a0, or fp0 as return registers, for integral,
+   pointer, or floating types, respectively.  Reject fp0 if not using
+   a 68881 coprocessor.  */
+
 #undef FUNCTION_VALUE_REGNO_P
 #define FUNCTION_VALUE_REGNO_P(N) \
-  ((N) == D0_REG || (TARGET_68881 && (N) == FP0_REG))
+  ((N) == D0_REG || (N) == A0_REG || (TARGET_68881 && (N) == FP0_REG))
 
-// see 930623-1.c
-//  ((N) == D0_REG || (N) == A0_REG || (TARGET_68881 && (N) == FP0_REG))
+/* Define this to be true when FUNCTION_VALUE_REGNO_P is true for
+   more than one register.  */
+
+#undef NEEDS_UNTYPED_CALL
+#define NEEDS_UNTYPED_CALL 1
+
+/* Define how to generate (in the callee) the output value of a
+   function and how to find (in the caller) the value returned by a
+   function.  VALTYPE is the data type of the value (as a tree).  If
+   the precise function being called is known, FUNC is its
+   FUNCTION_DECL; otherwise, FUNC is 0.  For m68k/SVR4 generate the
+   result in d0, a0, or fp0 as appropriate.  */
+
+#undef FUNCTION_VALUE
+#define FUNCTION_VALUE(VALTYPE, FUNC)					\
+  m68k_function_value (VALTYPE, FUNC)
+
+/* Define how to find the value returned by a library function
+   assuming the value has mode MODE.
+   For m68k/SVR4 look for integer values in d0, pointer values in d0
+   (returned in both d0 and a0), and floating values in fp0.  */
+
+#undef LIBCALL_VALUE
+#define LIBCALL_VALUE(MODE)						\
+  m68k_libcall_value (MODE)
 
 
 /* When creating shared libraries, use different 'errno'. */
@@ -319,6 +356,7 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
    Differentiate between libnix and ixemul.  */
 
 #define CPP_SPEC \
+  "%{!m68881:%{mhard-float:-D__HAVE_68881__}} " \
   "%{m68881:-D__HAVE_68881__} " \
   "%{!ansi:" \
     "%{m68020:-Dmc68020} " \
@@ -442,10 +480,6 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
   "%{!mcrt=*:%{!noixemul:%(startfile_newlib)}} "
 #endif
 
-
-#undef ENDFILE_SPEC
-#define ENDFILE_SPEC ""
-
 /* Automatically search libamiga.a for AmigaOS specific functions.  Note
    that we first search the standard C library to resolve as much as
    possible from there, since it has names that are duplicated in libamiga.a
@@ -477,6 +511,12 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
   "-lc " \
   "-lstubs "
 
+#if __POSIX_THREADS__
+#define __LPTHREAD__ "-lpthread "
+#else
+#define __LPTHREAD__   "%{pthread:-lpthread} %{lpthread:-lpthread } "
+#endif
+
 #ifdef TARGET_AMIGAOS_VASM
 #define LIB_SPEC \
   "-lvc -lamiga "
@@ -489,7 +529,7 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
   "%{mcrt=clib2:%(lib_clib2)} " \
   "%{!mcrt=*:%{!noixemul:%(lib_newlib)}} " \
   "-lamiga -lgcc "\
-  "%{lpthread:-lpthread } "\
+  __LPTHREAD__ \
   "%{lm:-lm -l__m__ } "\
   "-) "
 #endif
@@ -542,7 +582,7 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
   "%{fbaserel32:%{!resident32:-m amiga_bss -fl libb32}} " \
   "%{resident32:-m amiga_bss -amiga-datadata-reloc -fl libb32} " \
   "%{g:-amiga-debug-hunk} " \
-  "%{m68881:-fl libm881}"
+  "%(link_cpu) "
 #endif
 
 /* Translate '-resident' to '-fbaserel' (they differ in linking stage only).
@@ -554,8 +594,9 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
   "%{msmall-code:-fno-function-cse}"
 
 #define LINK_CPU_SPEC \
+  "%{m6806*|mcpu=6806*:-fl libm060} " \
   "%{m6802*|mc6802*|m6803*|m6804*|m6806*|m6808*|mcpu=6802*|mcpu=6803*|mcpu=6804*|mcpu=6806*|mcpu=6808*:-fl libm020} " \
-  "%{m68881:-fl libm881}"
+  "%{mhard-float|m68881|mcpu=6804*|mcpu=6806*|mcpu=6808*:-fl libm881}"
 
 #ifdef TARGET_AMIGAOS_VASM
 #define LINK_COMMAND_SPEC \
@@ -585,7 +626,7 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
           "%(linker) %l %X %{o*} %{A} %{d} %{e*} %{m} " \
           "%{N} %{n} %{r} %{s} %{t} %{u*} %{x} %{z} %{Z} " \
           "%{!A:%{!nostdlib:%{!nostartfiles:%S}}} " \
-          "%{static:} %{L*} %D %o " \
+          "%{static:} %{L*} %F -L%:sdk_root(../lib/) %o " \
           "%{!nostdlib:%{!nodefaultlibs:%L}} " \
           "%{!A:%{!nostdlib:%{!nostartfiles:%E}}} " \
           "%{!nostdlib:%{!nodefaultlibs:%G}} " \
@@ -673,8 +714,22 @@ amigaos_prelink_hook((const char **)(LD1_ARGV), (STRIP))
 #undef MAX_OFILE_ALIGNMENT
 #define MAX_OFILE_ALIGNMENT ((1 << 15)*BITS_PER_UNIT)
 
+#ifdef __amiga__
+#undef CROSS_DIRECTORY_STRUCTURE
+#define CROSS_DIRECTORY_STRUCTURE
+
+#undef CROSS_INCLUDE_DIR
+#define CROSS_INCLUDE_DIR "GCC:m68k-amigaos/sys-include"
+
+#undef FIXED_INCLUDE_DIR
+#define FIXED_INCLUDE_DIR "GCC:m68k-amigaos/ndk-include"
+
+#else
+
 #undef FIXED_INCLUDE_DIR
 #define FIXED_INCLUDE_DIR CROSS_INCLUDE_DIR "/../ndk-include"
+
+#endif
 
 /* Baserel support.  */
 extern int amiga_is_const_pic_ref(const_rtx x);
@@ -774,3 +829,26 @@ amigaos_function_arg_reg(unsigned regno);
 #undef FUNCTION_PROFILER
 #define FUNCTION_PROFILER(FILE, LABELNO) \
   asm_fprintf (FILE, "\tjsr _mcount\n")
+
+  
+  
+#define DOUBLE_INDIRECT_JUMP 1
+
+#define HAVE_GAS_WEAKREF 1
+
+/* This is how we tell the assembler that a symbol is weak.  */
+#define ASM_WEAKEN_LABEL(FILE, NAME)	\
+  do					\
+    {					\
+      fputs ("\t.weak\t", (FILE));	\
+      assemble_name ((FILE), (NAME));	\
+      fputc ('\n', (FILE));		\
+    }					\
+  while (0)
+
+#define MAKE_DECL_ONE_ONLY(DECL) (DECL_WEAK (DECL) = 1)
+
+#define CTOR_LISTS_DEFINED_EXTERNALLY 1
+#define AMIGA_USE_SECTIONS 1
+#define CTORS_SECTION_ASM_OP	"\t.section\t.list___CTOR_LIST__"
+#define DTORS_SECTION_ASM_OP	"\t.section\t.list___DTOR_LIST__"

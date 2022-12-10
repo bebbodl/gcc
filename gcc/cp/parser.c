@@ -22618,9 +22618,12 @@ cp_parser_parameter_declaration (cp_parser *parser,
 
       /* search outmost declarator, e.g. int * needs the attribute at the pointer not the int. */
       cp_declarator * d = declarator;
+      if (d)
+        {
       while (d->kind != cdk_id && d->declarator)
 	d = d->declarator;
       d->attributes = chainon(attrs, d->attributes);
+      }
     }
 #endif
 

@@ -5150,6 +5150,7 @@ extern struct m68k_frame {
  */
 static void fix_one(rtx_insn * insn, rtx * mem_loc, int opno, int size, int offset)
 {
+  tree name;
   rtx mem = *mem_loc;
   if (MEM_P(mem) && GET_CODE(XEXP(mem, 0)) == PLUS
       && REG_P(XEXP(XEXP(mem, 0), 0))
@@ -5159,7 +5160,8 @@ static void fix_one(rtx_insn * insn, rtx * mem_loc, int opno, int size, int offs
       && MEM_EXPR (mem)
       && MEM_OFFSET(mem).to_constant()
       && MEM_EXPR(mem)->base.code == VAR_DECL
-      && 0 == strcmp("%sfp", (char const *)MEM_EXPR (mem)->var_decl.common.common.common.common.name->identifier.id.str)
+	  && 0 != (name = MEM_EXPR (mem)->var_decl.common.common.common.common.name)
+      && 0 == strcmp("%sfp", (char const *)name->identifier.id.str)
       )
     {
       int n = INTVAL(XEXP(XEXP(mem, 0), 1));

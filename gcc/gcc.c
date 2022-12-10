@@ -521,6 +521,8 @@ or with constant text in a single argument.
 	assembler has done its job.
  %D	Dump out a -L option for each directory in startfile_prefixes.
 	If multilib_dir is set, extra entries are generated with it affixed.
+ %F	Dump out a -L option for each directory in startfile_prefixes.
+	Always ignore if multilib_dir is set.
  %l     process LINK_SPEC as a spec.
  %L     process LIB_SPEC as a spec.
  %M     Output multilib_os_dir.
@@ -5365,6 +5367,7 @@ do_spec_1 (const char *spec, int inswitch, const char *soft_matched_part)
 	     followed by the absolute directories
 	     that we search for startfiles.  */
 	  case 'D':
+	  case 'F':
 	    {
 	      struct spec_path_info info;
 
@@ -5382,7 +5385,7 @@ do_spec_1 (const char *spec, int inswitch, const char *soft_matched_part)
 #endif
 	      info.separate_options = false;
 
-	      for_each_path (&startfile_prefixes, true, 0, spec_path, &info);
+	      for_each_path (&startfile_prefixes, c == 'D', 0, spec_path, &info);
 	    }
 	    break;
 

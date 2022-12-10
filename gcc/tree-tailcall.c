@@ -422,7 +422,10 @@ bool func_is_using_regparms(const_tree func)
       if (0 != (attr = lookup_attribute ("asmregs", attrs)))
 	{
 	  // this is a string containing all register names like "d0a2d3a4"
-	  char const * p = IDENTIFIER_POINTER(TREE_VALUE(attr));
+      tree val = TREE_VALUE(attr);
+      if (val->base.code == TREE_LIST)
+        val = TREE_VALUE(val);
+	  char const * p = IDENTIFIER_POINTER(val);
 	  while (*p)
 	    {
 	      if (*p >= '2' && *p <= '7')
