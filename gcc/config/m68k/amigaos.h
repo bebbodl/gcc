@@ -385,8 +385,8 @@ amigaos_prelink_hook((const char **)(LD1_ARGV), (STRIP))
 */
 
 extern void amigaos_init_cumulative_args (CUMULATIVE_ARGS *cum, tree);
-extern void amigaos_function_arg_advance (cumulative_args_t, machine_mode, const_tree, bool);
-extern rtx amigaos_function_arg (cumulative_args_t, machine_mode, const_tree, bool);
+extern void amigaos_function_arg_advance (cumulative_args_t, const function_arg_info &);
+extern rtx amigaos_function_arg (cumulative_args_t, const function_arg_info &);
 extern cumulative_args_t amigaos_pack_cumulative_args (CUMULATIVE_ARGS *);
 extern int amigaos_comp_type_attributes (const_tree, const_tree);
 extern tree amigaos_handle_type_attribute(tree *, tree, tree, int, bool*);

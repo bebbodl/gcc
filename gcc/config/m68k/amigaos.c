@@ -42,7 +42,9 @@
 #include "diagnostic-core.h"
 #include "langhooks.h"
 #include "function.h"
+#include "calls.h"
 #include "config/m68k/amigaos.h"
+
 
 //#define MYDEBUG 1
 #ifdef MYDEBUG
@@ -272,7 +274,7 @@ amigaos_function_arg_reg (unsigned regno)
 /* Update the data in CUM to advance over an argument.  */
 
 void
-amigaos_function_arg_advance (cumulative_args_t cum_v, machine_mode, const_tree, bool)
+amigaos_function_arg_advance (cumulative_args_t cum_v, function_arg_info const& fai)
 {
   struct amigaos_args *cum = *get_cumulative_args (cum_v) ? &mycum : &othercum;
   /* Update the data in CUM to advance over an argument.  */
@@ -372,8 +374,9 @@ _m68k_function_arg (struct amigaos_args * cum, machine_mode mode, const_tree typ
  in a register, and which register. */
 
 struct rtx_def *
-amigaos_function_arg (cumulative_args_t cum_v, machine_mode mode, const_tree type, bool)
+amigaos_function_arg (cumulative_args_t cum_v, const function_arg_info & fai)
 {
+	tree type = fai.type;
   DPRINTF((stderr, "amigaos_function_arg %p\r\n", cum_v.p));
 
   struct amigaos_args *cum = *get_cumulative_args (cum_v) ? &mycum : &othercum;
@@ -384,7 +387,7 @@ amigaos_function_arg (cumulative_args_t cum_v, machine_mode mode, const_tree typ
     {
       int i;
       cum->last_arg_reg = TREE_INT_CST_LOW(TREE_VALUE(TREE_VALUE(asmtree)));
-      cum->last_arg_len = hard_regno_nregs(cum->last_arg_reg, mode);
+      cum->last_arg_len = hard_regno_nregs(cum->last_arg_reg, fai.mode);
 
       for (i = 0; i < cum->last_arg_len; i++)
 	{
@@ -395,9 +398,9 @@ amigaos_function_arg (cumulative_args_t cum_v, machine_mode mode, const_tree typ
 	    }
 	  cum->regs_already_used |= (1 << (cum->last_arg_reg + i));
 	}
-      return gen_rtx_REG (mode, cum->last_arg_reg);
+      return gen_rtx_REG (fai.mode, cum->last_arg_reg);
     }
-  return _m68k_function_arg (cum, mode, type);
+  return _m68k_function_arg (cum, fai.mode, type);
 }
 
 void

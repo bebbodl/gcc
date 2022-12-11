@@ -2213,15 +2213,6 @@ update_insn_infos (void)
 	    }
 	  else if (single_set (insn) == 0)
 	    use.make_hard ();
-	  else
-	  /* if not cc0 defined check for mod. */
-	  if (!use.is_def (FIRST_PSEUDO_REGISTER))
-	    {
-	      CC_STATUS_INIT;
-	      NOTICE_UPDATE_CC(PATTERN (insn), insn);
-	      if (cc_status.value1 || cc_status.value2)
-		use.mark_def (FIRST_PSEUDO_REGISTER);
-	    }
 
 	  // TODO: use 2 bits for data regs, to indicate mode size
 //	  // also check mode size if < 4, it's also a use for data registers.
@@ -3421,6 +3412,8 @@ opt_const_cmp_to_sub (void)
 static unsigned
 opt_merge_add (void)
 {
+	return 0;
+#if 0
   unsigned change_count = 0;
   for (unsigned index = 0; index + 2 < infos.size (); ++index)
     {
@@ -3477,6 +3470,7 @@ opt_merge_add (void)
       ++change_count;
     }
   return change_count;
+#endif
 }
 
 /* Update the insn_infos to 'know' the sp offset. */

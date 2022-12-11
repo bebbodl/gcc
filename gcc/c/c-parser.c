@@ -4421,7 +4421,7 @@ c_parser_parameter_declaration (c_parser *parser, tree attrs,
     }
 #endif
   if (c_parser_next_token_is_keyword (parser, RID_ATTRIBUTE))
-    postfix_attrs = c_parser_attributes (parser);
+    postfix_attrs = c_parser_gnu_attributes (parser);
 
   struct c_parm * cparm = build_c_parm (specs, chainon (postfix_attrs, prefix_attrs),
 					       declarator, param_loc);
