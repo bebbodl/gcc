@@ -136,11 +136,15 @@ readName (unsigned l, int descriptor, off_t * offset)
 static void *
 simple_object_amigahunk_match (
     unsigned char header[SIMPLE_OBJECT_MATCH_HEADER_LEN], int descriptor,
-    off_t offset, const char *segment_name ATTRIBUTE_UNUSED,
+    off_t offsetIn, const char *segment_name ATTRIBUTE_UNUSED,
     const char **errmsg, int *err)
 {
+  off_t offset;
+
   if (header[0] != 0 || header[1] != 0 || header[2] != 3 || header[3] != 0xe7)
     return NULL;
+
+  offset = offsetIn;
 
 //  fprintf (stderr, "simple_object_amigahunk_match\n");
 
@@ -185,14 +189,18 @@ simple_object_amigahunk_match (
 	  h->name = xstrdup ((char const*) name);
 
 	  offset += 4;
-	  h->length = read4 (descriptor, &offset) * 4;
-	  h->offset = offset;
+	  h->length = read4 (descriptor, &offset) * 4 - 3;
+	  h->offset = offset - offsetIn;
 	  offset -= 8;
 
 	  oar->root = h;
 	  break;
 	case 0x3e7: // UNIT
 	  {
+	    // UNIT of the next file in an archive?
+	    if (oar->name)
+	      goto Done;
+
 	      readName (sz, descriptor, &offset);
 	      oar->name = xstrdup ((char const *) name);
 	      break;
@@ -283,7 +291,7 @@ simple_object_amigahunk_match (
 	  break;
 	}
     }
-
+Done:
   return (void *) oar;
 }
 

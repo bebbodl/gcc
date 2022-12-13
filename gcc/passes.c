@@ -2277,17 +2277,6 @@ void dump_insns(char const * name)
     {
       next = NEXT_INSN(insn);
 	    debug_rtx(insn);
-#if 0
-      if (NONJUMP_INSN_P (insn))
-	{
-	  rtx set= single_set (insn);
-	  if (!set)
-	    continue;
-
-	  if (amiga_is_const_pic_ref(SET_SRC(set)) && MEM_P(SET_DEST(set)))
-	    debug_rtx(insn);
-	}
-#endif
     }
 }
 

@@ -148,7 +148,7 @@ namespace
 					    UNSPEC_RELOC16);
 	s = gen_rtx_CONST (Pmode, s);
 	s = gen_rtx_PLUS (Pmode, picreg, s);
-	s = gen_rtx_CONST (Pmode, s);
+//	s = gen_rtx_CONST (Pmode, s);
 
 	// try to use it directly.
 	if (!use_tmp)
@@ -195,6 +195,11 @@ namespace
 
     switch (code)
     {
+      // skip double replacement
+      case PLUS:
+	  if (XEXP (*x, 0) == picreg)
+	    return 1;
+	break;
       /*
        * Handle set: SRC and DEST may each have different symbols, so reset the use_tmp flag.
        */

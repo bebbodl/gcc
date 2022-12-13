@@ -30,7 +30,7 @@
 	  || GET_CODE (XEXP (op, 0)) == LABEL_REF
 	  || GET_CODE (XEXP (op, 0)) == CONST))
     return 1;
-#ifdef TARGET_AMIGA
+#ifdef TARGET_AMIGAx
   if (flag_pic >= 3 && amiga_is_const_pic_ref(op))
     return 0;
 #endif

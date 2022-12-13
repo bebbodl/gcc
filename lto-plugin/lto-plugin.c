@@ -652,7 +652,8 @@ all_symbols_read_handler (void)
 
   lto_argv = (char **) xcalloc (sizeof (char *), num_lto_args);
   lto_arg_ptr = (const char **) lto_argv;
-  assert (lto_wrapper_argv);
+  if (lto_wrapper_num_args)
+    assert (lto_wrapper_argv);
 
   write_resolution ();
 
