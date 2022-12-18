@@ -169,3 +169,11 @@
   "Non-register operands allowed in clr."
   (and (match_operand 0 "movsi_const0_operand")
        (match_test "!REG_P (op)")))
+
+(define_constraint "u"
+  "an relative offset to be used with a register"
+  (and (match_code "const")
+       (match_test "flag_pic >= 3 && 
+         (GET_CODE (XEXP (op, 0)) == UNSPEC ||
+           (GET_CODE (XEXP (op, 0)) == PLUS && GET_CODE (XEXP (XEXP (op, 0), 0)) == UNSPEC))"
+         )))
