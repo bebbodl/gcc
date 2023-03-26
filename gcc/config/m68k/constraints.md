@@ -37,7 +37,7 @@
        (match_test "ival >= -0x8000 && ival <= 0x7fff")))
 
 (define_constraint "K"
-  "Integer constant that moveq can't handle."
+  "Integer constant that moveq cannot handle."
   (and (match_code "const_int")
        (match_test "ival < -0x80 || ival >= 0x80")))
 
@@ -47,7 +47,7 @@
        (match_test "ival < 0 && ival >= -8")))
 
 (define_constraint "M"
-  "Integer constant that moveq+notb can't handle."
+  "Integer constant that moveq+notb cannot handle."
   (and (match_code "const_int")
        (match_test "ival < -0x100 || ival >= 0x100")))
 
@@ -95,7 +95,7 @@
   "Used for operands that satisfy 's' when -mpcrel is not in effect."
   (and (match_code "symbol_ref,label_ref,const")
        (match_test "!TARGET_PCREL")
-       (match_test "!flag_pic || LEGITIMATE_PIC_OPERAND_P (op)")))
+       (match_test "(flag_pic != 1 && flag_pic != 2) || LEGITIMATE_PIC_OPERAND_P (op)")))
 
 (define_memory_constraint "Q"
   "Means address register indirect addressing mode."

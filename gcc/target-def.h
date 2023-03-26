@@ -56,7 +56,7 @@
 #define TARGET_ASM_ALIGNED_PTI_OP NULL
 #define TARGET_ASM_UNALIGNED_PTI_OP NULL
 
-#if !defined(TARGET_ASM_CONSTRUCTOR) && !defined(USE_COLLECT2)
+#if !defined(TARGET_ASM_CONSTRUCTOR) && (!defined(USE_COLLECT2) || defined(TARGET_AMIGAOS))
 # ifdef CTORS_SECTION_ASM_OP
 #  define TARGET_ASM_CONSTRUCTOR default_ctor_section_asm_out_constructor
 # else
@@ -68,7 +68,7 @@
 # endif
 #endif
 
-#if !defined(TARGET_ASM_DESTRUCTOR) && !defined(USE_COLLECT2)
+#if !defined(TARGET_ASM_DESTRUCTOR) && (!defined(USE_COLLECT2) || defined(TARGET_AMIGAOS))
 # ifdef DTORS_SECTION_ASM_OP
 #  define TARGET_ASM_DESTRUCTOR default_dtor_section_asm_out_destructor
 # else

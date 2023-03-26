@@ -4194,8 +4194,18 @@ mangle_decl (const tree decl)
     id = get_identifier ("<anon>");
   else
     {
+#ifdef TARGET_AMIGAOS
+      if (!(TREE_CODE (decl) != TYPE_DECL
+                 || !no_linkage_check (TREE_TYPE (decl), true)))
+       no_linkage_check (TREE_TYPE (decl), true);
+      gcc_assert (TREE_CODE (decl) != TYPE_DECL
+         || !no_linkage_check (TREE_TYPE (decl), true)
+         || (TYPE_STUB_DECL (TREE_TYPE (decl))
+             && TREE_PUBLIC (TYPE_STUB_DECL (TREE_TYPE (decl)))));
+#else
       gcc_assert (TREE_CODE (decl) != TYPE_DECL
 		  || !no_linkage_check (TREE_TYPE (decl), true));
+#endif
       if (abi_version_at_least (10))
 	if (tree fn = decl_function_context (decl))
 	  maybe_check_abi_tags (fn, decl);

@@ -360,6 +360,13 @@ static void m68k_asm_final_postscan_insn (FILE *, rtx_insn *insn, rtx [], int);
 #undef TARGET_ASM_FINAL_POSTSCAN_INSN
 #define TARGET_ASM_FINAL_POSTSCAN_INSN m68k_asm_final_postscan_insn
 
+#if defined(TARGET_AMIGAOS)
+#include "amigaos.h"
+#endif
+
+extern tree
+m68k_handle_type_attribute (tree *node, tree name, tree args, int flags, bool *no_add_attrs);
+
 static const struct attribute_spec m68k_attribute_table[] =
 {
   /* { name, min_len, max_len, decl_req, type_req, fn_type_req,
@@ -370,6 +377,13 @@ static const struct attribute_spec m68k_attribute_table[] =
     m68k_handle_fndecl_attribute, NULL },
   { "interrupt_thread", 0, 0, true,  false, false, false,
     m68k_handle_fndecl_attribute, NULL },
+	  { "asmreg", 1, 1, false, true, false, true, m68k_handle_type_attribute, NULL },
+	  { "asmregs", 1, 1, false,  true, true, true, NULL, NULL },
+	  { "regparm", 1, 1, false,  true, true, true, m68k_handle_type_attribute, NULL },
+	  { "stkparm", 0, 0, false,  true, true, true, m68k_handle_type_attribute, NULL},
+#ifdef SUBTARGET_ATTRIBUTES
+  SUBTARGET_ATTRIBUTES
+#endif
   { NULL, 0, 0, false, false, false, false, NULL, NULL }
 };
 
@@ -630,7 +644,7 @@ m68k_option_override (void)
       else
 	m68k_symbolic_jump = "bra%.l %p0";
       /* Turn off function cse if we are doing PIC.  We always want
-	 function call to be done as `bsr foo@PLTPC'.  */
+	 function call to be done as %'bsr foo@PLTPC'.  */
       /* ??? It's traditional to do this for -mpcrel too, but it isn't
 	 clear how intentional that is.  */
       flag_no_function_cse = 1;
@@ -897,8 +911,8 @@ m68k_initial_elimination_offset (int from, int to)
     }
 }
 
-/* Refer to the array `regs_ever_live' to determine which registers
-   to save; `regs_ever_live[I]' is nonzero if register number I
+/* Refer to the array %'regs_ever_live' to determine which registers
+   to save; %'regs_ever_live[I]' is nonzero if register number I
    is ever used in the function.  This function is responsible for
    knowing which registers should not be saved even if used.
    Return true if we need to save REGNO.  */
@@ -1171,7 +1185,7 @@ m68k_expand_prologue (void)
 			    current_frame.reg_mask, true, true));
     }
 
-  if (!TARGET_SEP_DATA
+  if (!TARGET_SEP_DATA && !TARGET_AMIGAOS
       && crtl->uses_pic_offset_table)
     emit_insn (gen_load_got (pic_offset_table_rtx));
 }
@@ -1974,7 +1988,7 @@ m68k_output_btst (rtx countop, rtx dataop, rtx_code code, int signpos)
 	      return code == EQ ? PLUS : MINUS;
 	    }
 	}
-      /* Try to use `movew to ccr' followed by the appropriate branch insn.
+      /* Try to use %'movew to ccr' followed by the appropriate branch insn.
          On some m68k variants unfortunately that's slower than btst.
          On 68000 and higher, that should also work for all HImode operands. */
       if (TUNE_CPU32 || TARGET_COLDFIRE || optimize_size)
@@ -2009,7 +2023,7 @@ m68k_output_bftst (rtx zxop0, rtx zxop1, rtx zxop2, rtx_code code)
     {
       int width = GET_CODE (zxop0) == REG ? 31 : 7;
       /* Pass 1000 as SIGNPOS argument so that btst will
-	 not think we are testing the sign bit for an `and'
+	 not think we are testing the sign bit for an %'and'
 	 and assume that nonzero implies a negative result.  */
       return m68k_output_btst (GEN_INT (width - INTVAL (zxop2)), zxop0, code, 1000);
     }
@@ -2125,7 +2139,7 @@ m68k_legitimate_constant_address_p (rtx x, unsigned int reach, bool strict_p)
   if (!CONSTANT_ADDRESS_P (x))
     return false;
 
-  if (flag_pic
+  if ((flag_pic == 1 || flag_pic == 2)
       && !(strict_p && TARGET_PCREL)
       && symbolic_operand (x, VOIDmode))
     return false;
@@ -3575,7 +3589,7 @@ handle_move_double (rtx operands[2],
 	{
 	  /* If both halves of dest are used in the src memory address,
 	     compute the address into latehalf of dest.
-	     Note that this can't happen if the dest is two data regs.  */
+	     Note that this cannot happen if the dest is two data regs.  */
 	compadr:
 	  xops[0] = latehalf[0];
 	  xops[1] = XEXP (operands[1], 0);
@@ -3598,7 +3612,7 @@ handle_move_double (rtx operands[2],
 					   XEXP (operands[1], 0)))
 	{
 	  /* Check for two regs used by both source and dest.
-	     Note that this can't happen if the dest is all data regs.
+	     Note that this cannot happen if the dest is all data regs.
 	     It can happen if the dest is d6, d7, a0.
 	     But in that case, latehalf is an addr reg, so
 	     the code at compadr does ok.  */
@@ -3607,7 +3621,7 @@ handle_move_double (rtx operands[2],
 	      || reg_overlap_mentioned_p (latehalf[0], XEXP (operands[1], 0)))
 	    goto compadr;
 
-	  /* JRV says this can't happen: */
+	  /* JRV says this cannot happen: */
 	  gcc_assert (!addreg0 && !addreg1);
 
 	  /* Only the middle reg conflicts; simply put it last.  */
@@ -3628,7 +3642,7 @@ handle_move_double (rtx operands[2],
 
   /* Likewise,  the first move would clobber the source of the second one,
      do them in the other order.  This happens only for registers;
-     such overlap can't happen in memory unless the user explicitly
+     such overlap cannot happen in memory unless the user explicitly
      sets it up, and that is an undefined circumstance.  */
 
   if (optype0 == PUSHOP || optype1 == PUSHOP
@@ -4886,7 +4900,7 @@ standard_68881_constant_p (rtx x)
     return (codes_68881[6]);
 
   /* larger powers of ten in the constants ram are not used
-     because they are not equal to a `double' C constant.  */
+     because they are not equal to a %'double' C constant.  */
   return 0;
 }
 
@@ -4920,16 +4934,16 @@ floating_exact_log2 (rtx x)
    CODE is a value that can be used to specify one of several ways
    of printing the operand.  It is used when identical operands
    must be printed differently depending on the context.  CODE
-   comes from the `%' specification that was used to request
-   printing of the operand.  If the specification was just `%DIGIT'
-   then CODE is 0; if the specification was `%LTR DIGIT' then CODE
+   comes from the %'%' specification that was used to request
+   printing of the operand.  If the specification was just %'%DIGIT'
+   then CODE is 0; if the specification was %'%LTR DIGIT' then CODE
    is the ASCII code for LTR.
 
    If X is a register, this macro should print the register's name.
-   The names can be found in an array `reg_names' whose type is
-   `char *[]'.  `reg_names' is initialized from `REGISTER_NAMES'.
+   The names can be found in an array %'reg_names' whose type is
+   %'char *[]'.  %'reg_names' is initialized from %'REGISTER_NAMES'.
 
-   When the machine description has a specification `%PUNCT' (a `%'
+   When the machine description has a specification %'%PUNCT' (a %'%'
    followed by a punctuation character), this macro is called with
    a null pointer for X and the punctuation character for CODE.
 
@@ -4944,9 +4958,9 @@ floating_exact_log2 (rtx x)
        sp@, (sp) or (%sp) depending on the style of syntax.
    '#' for an immediate operand prefix (# in MIT and Motorola syntax
        but & in SGS syntax).
-   '!' for the cc register (used in an `and to cc' insn).
-   '$' for the letter `s' in an op code, but only on the 68040.
-   '&' for the letter `d' in an op code, but only on the 68040.
+   '!' for the cc register (used in an %'and to cc' insn).
+   '$' for the letter %'s' in an op code, but only on the 68040.
+   '&' for the letter %'d' in an op code, but only on the 68040.
    '/' for register prefix needed by longlong.h.
    '?' for m68k_library_id_string
 
@@ -4996,8 +5010,10 @@ print_operand (FILE *file, rtx op, int letter)
   else if (letter == 'p')
     {
       output_addr_const (file, op);
+#ifndef TARGET_AMIGAOS
       if (!(GET_CODE (op) == SYMBOL_REF && SYMBOL_REF_LOCAL_P (op)))
 	fprintf (file, "@PLTPC");
+#endif
     }
   else if (GET_CODE (op) == REG)
     {
@@ -5039,7 +5055,7 @@ print_operand (FILE *file, rtx op, int letter)
     }
   else
     {
-      /* Use `print_operand_address' instead of `output_addr_const'
+      /* Use %'print_operand_address' instead of %'output_addr_const'
 	 to ensure that we print relevant PIC stuff.  */
       asm_fprintf (file, "%I");
       if (TARGET_PCREL
@@ -5065,6 +5081,10 @@ m68k_get_reloc_decoration (enum m68k_reloc reloc)
 	{
 	  if (flag_pic == 1 && TARGET_68020)
 	    return "@GOT.w";
+	  else if (flag_pic == 3)
+	    return ":W";
+	  else if (flag_pic == 4)
+	    return ":L";
 	  else
 	    return "@GOT";
 	}
@@ -5245,7 +5265,7 @@ print_operand_address (FILE *file, rtx addr)
       else
 	{
 	  /* (xxx).l.  We need a special case for SYMBOL_REF if the symbol
-	     name ends in `.<letter>', as the last 2 characters can be
+	     name ends in %'.<letter>', as the last 2 characters can be
 	     mistaken as a size suffix.  Put the name in parentheses.  */
 	  if (GET_CODE (addr) == SYMBOL_REF
 	      && strlen (XSTR (addr, 0)) > 2
@@ -5649,7 +5669,7 @@ m68k_output_mi_thunk (FILE *file, tree thunk ATTRIBUTE_UNUSED,
     {
       gcc_assert (flag_pic);
 
-      if (!TARGET_SEP_DATA)
+      if (!TARGET_SEP_DATA && !TARGET_AMIGAOS)
 	{
 	  /* Use the static chain register as a temporary (call-clobbered)
 	     GOT pointer for this function.  We can use the static chain
@@ -7006,7 +7026,7 @@ m68k_sched_indexed_address_bypass_p (rtx_insn *pro, rtx_insn *con)
   switch (sched_get_indexed_address_scale (pro, con))
     {
     case 1:
-      /* We can't have a variable latency bypass, so
+      /* We cannot have a variable latency bypass, so
 	 remember to adjust the insn cost in adjust_cost hook.  */
       sched_cfv4_bypass_data.pro = pro;
       sched_cfv4_bypass_data.con = con;
@@ -7051,7 +7071,7 @@ m68k_trampoline_init (rtx m_tramp, tree fndecl, rtx chain_value)
 /* On the 68000, the RTS insn cannot pop anything.
    On the 68010, the RTD insn may be used to pop them if the number
      of args is fixed, but if the number is variable then the caller
-     must pop them all.  RTD can't be used for library calls now
+     must pop them all.  RTD cannot be used for library calls now
      because the library is compiled with the Unix compiler.
    Use of RTD is a selectable option, since it is incompatible with
    standard Unix calling sequences.  If the option is not selected,

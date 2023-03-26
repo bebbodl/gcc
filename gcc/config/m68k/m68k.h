@@ -17,6 +17,8 @@ You should have received a copy of the GNU General Public License
 along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
 
+#define TARGET_M68K 1
+
 /* We need to have MOTOROLA always defined (either 0 or 1) because we use
    if-statements and ?: on it.  This way we have compile-time error checking
    for both the MOTOROLA and MIT code paths.  We do rely on the host compiler
@@ -308,7 +310,7 @@ along with GCC; see the file COPYING3.  If not see
 
 #define INT_TYPE_SIZE (TARGET_SHORT ? 16 : 32)
 
-/* Define these to avoid dependence on meaning of `int'.  */
+/* Define these to avoid dependence on meaning of %'int'.  */
 #define WCHAR_TYPE "long int"
 #define WCHAR_TYPE_SIZE 32
 
@@ -321,7 +323,7 @@ along with GCC; see the file COPYING3.  If not see
 /* For the m68k, we give the data registers numbers 0-7,
    the address registers numbers 010-017 (8-15),
    and the 68881 floating point registers numbers 020-027 (16-23).
-   We also have a fake `arg-pointer' register 030 (24) used for
+   We also have a fake %'arg-pointer' register 030 (24) used for
    register elimination.  */
 #define FIRST_PSEUDO_REGISTER 25
 
@@ -487,16 +489,36 @@ extern enum reg_class regno_reg_class[];
    XXX This macro is m68k specific and used only for m68kemb.h.  */
 #define NEEDS_UNTYPED_CALL 0
 
-/* On the m68k, all arguments are usually pushed on the stack.  */
-#define FUNCTION_ARG_REGNO_P(N) 0
 
 /* On the m68k, this is a single integer, which is a number of bytes
    of arguments scanned so far.  */
+/* SBF: int is enough public info. rest is handled internally. */
 #define CUMULATIVE_ARGS int
 
-/* On the m68k, the offset starts at 0.  */
+extern void m68k_init_cumulative_args (CUMULATIVE_ARGS *, tree, tree);
+extern int m68k_function_arg_reg(unsigned regno);
+
+/* Initialize a variable CUM of type CUMULATIVE_ARGS
+   for a call to a function whose data type is FNTYPE.
+   For a library call, FNTYPE is 0.  */
+#undef INIT_CUMULATIVE_ARGS
 #define INIT_CUMULATIVE_ARGS(CUM, FNTYPE, LIBNAME, INDIRECT, N_NAMED_ARGS) \
- ((CUM) = 0)
+  (m68k_init_cumulative_args(&(CUM), (FNTYPE), (INDIRECT)))
+
+/* 1 if N is a possible register number for function argument passing.  */
+#undef FUNCTION_ARG_REGNO_P
+#define FUNCTION_ARG_REGNO_P(N)    m68k_function_arg_reg(N)
+
+/* Max. number of data, address and float registers to be used for passing
+   integer, pointer and float arguments when TARGET_REGPARM.
+   It's 4, so d0-d3, a0-a3 and fp0-fp3 can be used.  */
+#undef M68K_MAX_REGPARM
+#define M68K_MAX_REGPARM 4
+
+/* The default number of data, address and float registers to use when
+   user specified '-mregparm' switch, not '-mregparm=<value>' option.  */
+#undef M68K_DEFAULT_REGPARM
+#define M68K_DEFAULT_REGPARM 2
 
 #define FUNCTION_PROFILER(FILE, LABELNO)  \
   asm_fprintf (FILE, "\tlea %LLP%d,%Ra0\n\tjsr mcount\n", (LABELNO))
@@ -851,8 +873,8 @@ __transfer_from_trampoline ()					\
    '#' for an immediate operand prefix (# in MIT and Motorola syntax
        but & in SGS syntax).
    '!' for the fpcr register (used in some float-to-fixed conversions).
-   '$' for the letter `s' in an op code, but only on the 68040.
-   '&' for the letter `d' in an op code, but only on the 68040.
+   '$' for the letter %'s' in an op code, but only on the 68040.
+   '&' for the letter %'d' in an op code, but only on the 68040.
    '/' for register prefix needed by longlong.h.
    '?' for m68k_library_id_string
 

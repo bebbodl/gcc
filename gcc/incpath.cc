@@ -432,12 +432,32 @@ add_cpp_dir_path (cpp_dir *p, incpath_kind chain)
   tails[chain] = p;
 }
 
+static void normalize(char * path)
+{
+  // normalize
+  char *q, *p = path;
+//  printf("path: <%s>\t", path);
+  while ((q = strstr (p, "/../")))
+	{
+	  char *r = q - 1;
+	  while (r >= p && *r != '/' && *r != ':')
+	    --r;
+	  if (r < p)
+	    break;
+	  memmove (r + 1, q + 4, strlen (q + 4) + 1);
+	}
+//  printf("-> <%s>\n", path);
+}
+
 /* Add PATH to the include chain CHAIN. PATH must be malloc-ed and
    NUL-terminated.  */
 void
 add_path (char *path, incpath_kind chain, int cxx_aware, bool user_supplied_p)
 {
   cpp_dir *p;
+
+  normalize (path);
+
   size_t pathlen = strlen (path);
 
 #if defined (HAVE_DOS_BASED_FILE_SYSTEM)

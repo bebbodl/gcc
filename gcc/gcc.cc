@@ -1204,7 +1204,10 @@ static const char *startfile_prefix_spec = STARTFILE_PREFIX_SPEC;
 static const char *sysroot_spec = SYSROOT_SPEC;
 static const char *sysroot_suffix_spec = SYSROOT_SUFFIX_SPEC;
 static const char *sysroot_hdrs_suffix_spec = SYSROOT_HEADERS_SUFFIX_SPEC;
-static const char *self_spec = "";
+#ifndef SELF_SPEC
+#define SELF_SPEC ""
+#endif
+static const char *self_spec = SELF_SPEC;
 
 /* Standard options to cpp, cc1, and as, to reduce duplication in specs.
    There should be no need to override these in target dependent files,
@@ -6083,6 +6086,7 @@ do_spec_1 (const char *spec, int inswitch, const char *soft_matched_part)
 	     followed by the absolute directories
 	     that we search for startfiles.  */
 	  case 'D':
+	  case 'F':
 	    {
 	      struct spec_path_info info;
 
@@ -11237,3 +11241,48 @@ driver_get_configure_time_options (void (*cb) (const char *option,
   obstack_free (&obstack, NULL);
   n_switches = 0;
 }
+
+#if defined(TARGET_AMIGAOS)
+
+static void normalize(char * path)
+{
+  // normalize
+  char *q, *p = path;
+//  printf("path: <%s>\t", path);
+  while ((q = strstr (p, "/../")))
+	{
+	  char *r = q - 1;
+	  while (r >= p && *r != '/' && *r != ':')
+	    --r;
+	  if (r < p)
+	    break;
+	  memmove (r + 1, q + 4, strlen (q + 4) + 1);
+	}
+//  printf("-> <%s>\n", path);
+}
+
+const char * amiga_m68k_prefix_func(int argc, const char ** argv) {
+  char * p;
+  if (standard_libexec_prefix)
+      p = make_relative_prefix(standard_libexec_prefix, "", "m68k-amigaos/");
+  else
+    p = concat("../../../../", "", NULL);
+
+  for (int i = 0; i < argc; ++i) {
+      char * q = concat(p, argv[i], NULL);
+      free(p);
+      p = q;
+  }
+
+  normalize(p);
+
+  if (!*p)  {
+      char * q = concat(p, ".", NULL);
+      free(p);
+      p = q;
+  }
+
+//  printf("amiga_m68k_prefix_func='%s'\n", p);
+  return p;
+}
+#endif

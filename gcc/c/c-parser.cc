@@ -4876,9 +4876,26 @@ c_parser_parameter_declaration (c_parser *parser, tree attrs,
 			  ? id_declarator->id_loc
 			  : start_loc);
   location_t param_loc = make_location (caret_loc, start_loc, end_loc);
+  /**
+   * SBF: Add support for __asm("xy") register spec.
+   */
+#ifdef TARGET_M68K
+  tree asmspec = NULL_TREE;
+  if (c_parser_next_token_is_keyword (parser, RID_ASM))
+    {
+      asmspec = c_parser_simple_asm_expr (parser);
+//     printf("asmspec: %s\n", TREE_STRING_POINTER(asmspec));
+    }
+#endif
+  if (c_parser_next_token_is_keyword (parser, RID_ATTRIBUTE))
+    postfix_attrs = c_parser_gnu_attributes (parser);
 
-  return build_c_parm (specs, chainon (postfix_attrs, prefix_attrs),
-		       declarator, param_loc);
+  struct c_parm * cparm = build_c_parm (specs, chainon (postfix_attrs, prefix_attrs),
+	       declarator, param_loc);
+#ifdef TARGET_M68K
+  cparm->asmspec = asmspec;
+#endif
+  return cparm;
 }
 
 /* Parse a string literal in an asm expression.  It should not be

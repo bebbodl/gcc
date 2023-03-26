@@ -235,7 +235,7 @@ case $1 in
 				basic_machine=m68k-unknown
 				basic_os=
 				;;
-			amigaos | amigados)
+			amigaos | amigaosvasm | amigados)
 				basic_machine=m68k-unknown
 				basic_os=amigaos
 				;;
