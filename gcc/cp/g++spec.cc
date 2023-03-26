@@ -302,7 +302,7 @@ lang_specific_driver (struct cl_decoded_option **in_decoded_options,
 
   /* Add one for shared_libgcc or extra static library.  */
   num_args = (argc + added + need_math + need_experimental
-	      + (library > 0) * 4 + 1);
+	      + (library > 0) * 5 + 1);
   /* For libc++, on most platforms, the ABI library (usually called libc++abi)
      is provided as a separate DSO, which we must also append.
      However, a platform might have the ability to forward the ABI library
@@ -389,6 +389,31 @@ lang_specific_driver (struct cl_decoded_option **in_decoded_options,
 	  j++;
 	}
 #endif
+
+#ifdef TARGET_AMIGAOS
+       {
+         bool add_new_op = false;
+         /* do not add glue if exceptions are disabled. */
+         for (unsigned int ii = 0; ii < argc; ++ii)
+           {
+             if (decoded_options[ii].opt_index == OPT_fexceptions)
+               add_new_op = !decoded_options[ii].value;
+           }
+         if (add_new_op)
+           {
+             extern const char *
+             amiga_m68k_prefix_func (int argc, const char ** argv);
+             char const * new_op = "../lib/gcc/m68k-amigaos/"
+             DEFAULT_TARGET_VERSION
+             "/new_op.o";
+             char const * p = amiga_m68k_prefix_func (1, &new_op);
+             generate_option_input_file (p, &new_decoded_options[j]);
+             ++j;
+           }
+       }
+#endif
+
+
       if (which_library == USE_LIBCXX)
 	{
 	  generate_option (OPT_l,

@@ -56,6 +56,10 @@
 // See libstdc++/69506
 #define _GLIBCXX_USE_WEAK_REF 0
 
+#elif defined (__AMIGA__)
+#define _GLIBCXX_GTHREAD_USE_WEAK 0
+#define _GLIBCXX_USE_WEAK_REF 0
+
 #endif
 
 #endif
