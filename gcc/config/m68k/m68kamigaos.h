@@ -672,10 +672,11 @@ amigaos_prelink_hook((const char **)(LD1_ARGV), (STRIP))
    m68k/SVR4 allow d0, a0, or fp0 as return registers, for integral,
    pointer, or floating types, respectively.  Reject fp0 if not using
    a 68881 coprocessor.  */
+/* SBF: no A0. */
 
 #undef FUNCTION_VALUE_REGNO_P
 #define FUNCTION_VALUE_REGNO_P(N) \
-  ((N) == D0_REG || (N) == A0_REG || (TARGET_68881 && (N) == FP0_REG))
+  ((N) == D0_REG || (TARGET_68881 && (N) == FP0_REG))
 
 /* Define this to be true when FUNCTION_VALUE_REGNO_P is true for
    more than one register.  */
@@ -688,11 +689,11 @@ amigaos_prelink_hook((const char **)(LD1_ARGV), (STRIP))
    function.  VALTYPE is the data type of the value (as a tree).  If
    the precise function being called is known, FUNC is its
    FUNCTION_DECL; otherwise, FUNC is 0.  For m68k/SVR4 generate the
-   result in d0, a0, or fp0 as appropriate.  */
+   result in d0, d0, or fp0 as appropriate.  */
 
 #undef FUNCTION_VALUE
 #define FUNCTION_VALUE(VALTYPE, FUNC)					\
-  m68k_function_value (VALTYPE, FUNC)
+	m68k_libcall_value (TYPE_MODE (VALTYPE))
 
 /* Define how to find the value returned by a library function
    assuming the value has mode MODE.
