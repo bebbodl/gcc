@@ -69,3 +69,5 @@ stamp-*
 /mpc*
 /gmp*
 /isl*
+
+/.settings
