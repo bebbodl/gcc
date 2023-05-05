@@ -395,8 +395,13 @@ struct gcc_target targetm = TARGET_INITIALIZER;
 /* FL_68881 controls the default setting of -m68881.  gcc has traditionally
    generated 68881 code for 68020 and 68030 targets unless explicitly told
    not to.  */
+#ifdef TARGET_AMIGAOS
+/* SBF: no CAS on the AMIGA and no 68881 per default. */
+#define FL_FOR_isa_20    (FL_FOR_isa_10 | FL_ISA_68020 | FL_BITFIELD )
+#else
 #define FL_FOR_isa_20    (FL_FOR_isa_10 | FL_ISA_68020 \
 			  | FL_BITFIELD | FL_68881 | FL_CAS)
+#endif
 #define FL_FOR_isa_40    (FL_FOR_isa_20 | FL_ISA_68040)
 #define FL_FOR_isa_cpu32 (FL_FOR_isa_10 | FL_ISA_68020)
 

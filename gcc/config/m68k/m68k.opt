@@ -119,7 +119,7 @@ Target RejectNegative Alias(mcpu=, 547x)
 Generate code for a ColdFire v4e.
 
 mcpu=
-Target RejectNegative Joined Enum(target_device) Var(m68k_cpu_option) Init(unk_device)
+Target RejectNegative Joined Enum(target_device) Var(m68k_cpu_option) Init(m68000)
 Specify the target CPU.
 
 mcpu32
