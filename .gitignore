@@ -70,4 +70,5 @@ stamp-*
 /gmp*
 /isl*
 
-/.settings
+/.settings*
+/.cproject
