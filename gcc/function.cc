@@ -2255,7 +2255,11 @@ use_register_for_decl (const_tree decl)
   if (TREE_CODE (decl) == PARM_DECL && cfun->tail_call_marked)
     return true;
 
-  if (!DECL_REGISTER (decl))
+  if (!DECL_REGISTER (decl)
+#ifdef TARGET_M68K
+		&& (!DECL_INCOMING_RTL (decl) || !REG_P (DECL_INCOMING_RTL (decl)))
+#endif
+  )
     return false;
 
   /* When not optimizing, disregard register keyword for types that

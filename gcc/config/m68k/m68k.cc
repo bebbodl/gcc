@@ -182,9 +182,9 @@ static void m68k_output_dwarf_dtprel (FILE *, int, rtx) ATTRIBUTE_UNUSED;
 static void m68k_trampoline_init (rtx, tree, rtx);
 static poly_int64 m68k_return_pops_args (tree, tree, poly_int64);
 static rtx m68k_delegitimize_address (rtx);
-static void m68k_function_arg_advance (cumulative_args_t,
+extern void m68k_function_arg_advance (cumulative_args_t,
 				       const function_arg_info &);
-static rtx m68k_function_arg (cumulative_args_t, const function_arg_info &);
+extern rtx m68k_function_arg (cumulative_args_t, const function_arg_info &);
 static bool m68k_cannot_force_const_mem (machine_mode mode, rtx x);
 static bool m68k_output_addr_const_extra (FILE *, rtx);
 static void m68k_init_sync_libfuncs (void) ATTRIBUTE_UNUSED;
@@ -1448,23 +1448,6 @@ m68k_ok_for_sibcall_p (tree decl, tree exp)
     return true;
   
   return false;
-}
-
-/* On the m68k all args are always pushed.  */
-
-static rtx
-m68k_function_arg (cumulative_args_t, const function_arg_info &)
-{
-  return NULL_RTX;
-}
-
-static void
-m68k_function_arg_advance (cumulative_args_t cum_v,
-			   const function_arg_info &arg)
-{
-  CUMULATIVE_ARGS *cum = get_cumulative_args (cum_v);
-
-  *cum += (arg.promoted_size_in_bytes () + 3) & ~3;
 }
 
 /* Convert X to a legitimate function call memory reference and return the

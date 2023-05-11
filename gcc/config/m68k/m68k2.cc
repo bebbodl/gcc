@@ -43,6 +43,7 @@
 #include "langhooks.h"
 #include "function.h"
 #include "stor-layout.h"
+#include "calls.h"
 
 //#define MYDEBUG 1
 #ifdef MYDEBUG
@@ -215,8 +216,8 @@ m68k_function_value_regno_p(unsigned regno) {
 
 /* Update the data in CUM to advance over an argument.  */
 
-void
-m68k_function_arg_advance (cumulative_args_t cum_v, machine_mode, const_tree, bool)
+void m68k_function_arg_advance (cumulative_args_t cum_v,
+				       const function_arg_info & ai)
 {
   struct m68k_args *cum = *get_cumulative_args (cum_v) ? &mycum : &othercum;
   /* Update the data in CUM to advance over an argument.  */
@@ -317,20 +318,19 @@ _m68k_function_arg (struct m68k_args * cum, machine_mode mode, const_tree type)
 /* A C expression that controls whether a function argument is passed
  in a register, and which register. */
 
-struct rtx_def *
-m68k_function_arg (cumulative_args_t cum_v, machine_mode mode, const_tree type, bool)
+rtx m68k_function_arg (cumulative_args_t cum_v, const function_arg_info & ai)
 {
   DPRINTF((stderr, "m68k_function_arg %p\r\n", cum_v.p));
 
   struct m68k_args *cum = *get_cumulative_args (cum_v) ? &mycum : &othercum;
 
-  tree asmtree = type && cum->current_param_type ? lookup_attribute("asmreg", TYPE_ATTRIBUTES(TREE_VALUE(cum->current_param_type))) : NULL_TREE;
+  tree asmtree = ai.type && cum->current_param_type ? lookup_attribute("asmreg", TYPE_ATTRIBUTES(TREE_VALUE(cum->current_param_type))) : NULL_TREE;
 
   if (asmtree)
     {
       int i;
       cum->last_arg_reg = TREE_INT_CST_LOW(TREE_VALUE(TREE_VALUE(asmtree)));
-      cum->last_arg_len = mode == DImode ? 2 : 1;
+      cum->last_arg_len = ai.mode == DImode ? 2 : 1;
 
       for (i = 0; i < cum->last_arg_len; i++)
 	{
@@ -341,9 +341,9 @@ m68k_function_arg (cumulative_args_t cum_v, machine_mode mode, const_tree type, 
 	    }
 	  cum->regs_already_used |= (1 << (cum->last_arg_reg + i));
 	}
-      return gen_rtx_REG (mode, cum->last_arg_reg);
+      return gen_rtx_REG (ai.mode, cum->last_arg_reg);
     }
-  return _m68k_function_arg (cum, mode, type);
+  return _m68k_function_arg (cum, ai.mode, ai.type);
 }
 
 void
