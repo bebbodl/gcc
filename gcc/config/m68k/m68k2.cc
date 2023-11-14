@@ -116,10 +116,16 @@ m68k_init_cumulative_args (CUMULATIVE_ARGS *cump, tree fntype, tree decl)
 
   if (!fntype && decl)
     fntype = TREE_TYPE(decl);
-// SBF: oh my ... - this caused crafted functions to lose asm parameters....
-// but it was needed for memset - uh  oh - doh - use virtual instead
-  if (decl && decl->decl_common.virtual_flag)
-    fntype = NULL;
+
+  /* SBF: see expr.c:init_block_clear_fn
+     memset uses the stack!
+        DECL_EXTERNAL (fn) = 1;
+        TREE_PUBLIC (fn) = 1;
+  */
+    if (decl && DECL_EXTERNAL(decl) && TREE_PUBLIC(decl)
+        && DECL_NAME(decl) && IDENTIFIER_POINTER (DECL_NAME (decl))
+        && 0 == strcmp("memset", IDENTIFIER_POINTER (DECL_NAME (decl))))
+      fntype = 0;
 
   if (decl && fndecl_built_in_p(decl))
     fntype = NULL;
