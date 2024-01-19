@@ -361,9 +361,12 @@ along with GCC; see the file COPYING3.  If not see
 /* For the m68k, we give the data registers numbers 0-7,
    the address registers numbers 010-017 (8-15),
    and the 68881 floating point registers numbers 020-027 (16-23).
-   We also have a fake `arg-pointer' register 030 (24) used for
+   For the 68080 there are also the data regs e0-e7 at 24-31
+   and the address regs b0-b7 at 32-39
+
+   We also have a fake `arg-pointer' register 030 (40) used for
    register elimination.  */
-#define FIRST_PSEUDO_REGISTER 25
+#define FIRST_PSEUDO_REGISTER 41
 
 /* All m68k targets (except AmigaOS) use %a5 as the PIC register  */
 #define PIC_OFFSET_TABLE_REGNUM				\
@@ -382,11 +385,17 @@ along with GCC; see the file COPYING3.  If not see
   /* Address registers.  */    \
   0, 0, 0, 0, 0, 0, 0, 1,      \
                                \
+  /* 68080 data registers.  */ \
+  0, 0, 0, 0, 0, 0, 0, 0,      \
+ 			       \
+  /* 68080 address regs. */    \
+  0, 0, 0, 0, 0, 0, 0, 0,      \
+   			       \
   /* Floating point registers  \
      (if available).  */       \
   0, 0, 0, 0, 0, 0, 0, 0,      \
                                \
-  /* Arg pointer.  */          \
+/* Arg pointer.  */          \
   1 }
 
 /* 1 for registers not available across function calls.
@@ -402,6 +411,12 @@ along with GCC; see the file COPYING3.  If not see
   /* Address registers.  */     \
   1, 1, 0, 0, 0, 0, 0, 1,       \
                                 \
+  /* 68080 data registers.  */  \
+  0, 0, 0, 0, 0, 0, 0, 0,       \
+			        \
+  /* 68080 address regs. */     \
+  0, 0, 0, 0, 0, 0, 0, 0,       \
+			        \
   /* Floating point registers   \
      (if available).  */        \
   1, 1, 0, 0, 0, 0, 0, 0,       \
@@ -409,22 +424,26 @@ along with GCC; see the file COPYING3.  If not see
   /* Arg pointer.  */           \
   1 }
 
-#define REG_ALLOC_ORDER		\
-{ /* d0/d1/a0/a1 */		\
-  0, 1, 8, 9,			\
-  /* d2-d7 */			\
-  2, 3, 4, 5, 6, 7,		\
-  /* a2-a7/arg */		\
-  10, 11, 12, 13, 14, 15, 24,	\
-  /* fp0-fp7 */			\
-  16, 17, 18, 19, 20, 21, 22, 23\
+#define REG_ALLOC_ORDER		  \
+{ /* d0/d1/a0/a1 */		  \
+  0, 1, 8, 9,			  \
+  /* d2-d7 */			  \
+  2, 3, 4, 5, 6, 7,		  \
+  /* a2-a7 */		          \
+  18, 19, 20, 21, 22, 23,	  \
+  /* e0-e7 */                     \
+  10, 11, 12, 13, 14, 15, 16, 17, \
+  /* b0-b7/arg */                 \
+  24, 25, 26, 27, 28, 29, 30, 31, 40, \
+  /* fp0-fp7 */			  \
+  32, 33, 34, 35, 36, 37, 38, 39  \
 }
 
 /* On the m68k, ordinary registers hold 32 bits worth;
    for the 68881 registers, a single register is always enough for
    anything that can be stored in them at all.  */
 #define HARD_REGNO_NREGS(REGNO, MODE)   \
-  ((REGNO) >= 16 ? GET_MODE_NUNITS (MODE)	\
+  ((REGNO) >= FP0_REG ? GET_MODE_NUNITS (MODE)	\
    : ((GET_MODE_SIZE (MODE) + UNITS_PER_WORD - 1) / UNITS_PER_WORD))
 
 /* A C expression that is nonzero if hard register NEW_REG can be
@@ -460,7 +479,7 @@ along with GCC; see the file COPYING3.  If not see
  * This isn't a hardware register. It will be eliminated to the
  * stack pointer or frame pointer.
  */
-#define ARG_POINTER_REGNUM 24
+#define ARG_POINTER_REGNUM 40
 
 
 
@@ -483,14 +502,14 @@ enum reg_class {
 
 #define REG_CLASS_CONTENTS \
 {					\
-  {0x00000000},  /* NO_REGS */		\
-  {0x000000ff},  /* DATA_REGS */	\
-  {0x0100ff00},  /* ADDR_REGS */	\
-  {0x00ff0000},  /* FP_REGS */		\
-  {0x0100ffff},  /* GENERAL_REGS */	\
-  {0x00ff00ff},  /* DATA_OR_FP_REGS */	\
-  {0x01ffff00},  /* ADDR_OR_FP_REGS */	\
-  {0x01ffffff},  /* ALL_REGS */		\
+  {0x00000000, 0x0000},  /* NO_REGS */		\
+  {0x00ff00ff, 0x0000},  /* DATA_REGS */	\
+  {0xff00ff00, 0x0100},  /* ADDR_REGS */	\
+  {0x00000000, 0x00ff},  /* FP_REGS */		\
+  {0xffffffff, 0x0100},  /* GENERAL_REGS */	\
+  {0x00ff00ff, 0x00ff},  /* DATA_OR_FP_REGS */	\
+  {0xff00ff00, 0x01ff},  /* ADDR_OR_FP_REGS */	\
+  {0xffffffff, 0x01ff},  /* ALL_REGS */		\
 }
 
 extern enum reg_class regno_reg_class[];
@@ -685,16 +704,16 @@ __transfer_from_trampoline ()					\
 /* Macros to check register numbers against specific register classes.  */
 
 /* True for data registers, D0 through D7.  */
-#define DATA_REGNO_P(REGNO)	IN_RANGE (REGNO, 0, 7)
+#define DATA_REGNO_P(REGNO)	(IN_RANGE (REGNO, D0_REG, D7_REG) || (flag_experimental && TUNE_68080 && IN_RANGE(REGNO, E0_REG, E7_REG)))
 
 /* True for address registers, A0 through A7.  */
-#define ADDRESS_REGNO_P(REGNO)	IN_RANGE (REGNO, 8, 15)
+#define ADDRESS_REGNO_P(REGNO)	(IN_RANGE (REGNO, A0_REG, SP_REG) || (flag_experimental && TUNE_68080 && IN_RANGE(REGNO, B0_REG, B7_REG)))
 
 /* True for integer registers, D0 through D7 and A0 through A7.  */
-#define INT_REGNO_P(REGNO)	IN_RANGE (REGNO, 0, 15)
+#define INT_REGNO_P(REGNO)	(IN_RANGE (REGNO, D0_REG, SP_REG) || (flag_experimental && TUNE_68080 && IN_RANGE(REGNO, E0_REG, B7_REG)))
 
 /* True for floating point registers, FP0 through FP7.  */
-#define FP_REGNO_P(REGNO)	IN_RANGE (REGNO, 16, 23)
+#define FP_REGNO_P(REGNO)	IN_RANGE (REGNO, FP0_REG, FP7_REG)
 
 #define REGNO_OK_FOR_INDEX_P(REGNO)			\
   (INT_REGNO_P (REGNO)					\
@@ -729,6 +748,8 @@ __transfer_from_trampoline ()					\
 
 /* 1 if X is an address register  */
 #define ADDRESS_REG_P(X) (REG_P (X) && ADDRESS_REGNO_P (REGNO (X)))
+
+#define INT_REG_P(X) (REG_P (X) && (ADDRESS_REGNO_P (REGNO (X)) || DATA_REGNO_P (REGNO (X))))
 
 /* True if SYMBOL + OFFSET constants must refer to something within
    SYMBOL's section.  */
@@ -882,6 +903,12 @@ do { if (cc_prev_status.flags & CC_IN_68881)			\
  REGISTER_PREFIX"a0", REGISTER_PREFIX"a1", REGISTER_PREFIX"a2", \
  REGISTER_PREFIX"a3", REGISTER_PREFIX"a4", REGISTER_PREFIX"a5", \
  REGISTER_PREFIX"a6", REGISTER_PREFIX"sp",			\
+ REGISTER_PREFIX"e0", REGISTER_PREFIX"e1", REGISTER_PREFIX"e2",	\
+ REGISTER_PREFIX"e3", REGISTER_PREFIX"e4", REGISTER_PREFIX"e5",	\
+ REGISTER_PREFIX"e6", REGISTER_PREFIX"e7",			\
+ REGISTER_PREFIX"b0", REGISTER_PREFIX"b1", REGISTER_PREFIX"b2",	\
+ REGISTER_PREFIX"b3", REGISTER_PREFIX"b4", REGISTER_PREFIX"b5",	\
+ REGISTER_PREFIX"b6", REGISTER_PREFIX"b7",			\
  REGISTER_PREFIX"fp0", REGISTER_PREFIX"fp1", REGISTER_PREFIX"fp2", \
  REGISTER_PREFIX"fp3", REGISTER_PREFIX"fp4", REGISTER_PREFIX"fp5", \
  REGISTER_PREFIX"fp6", REGISTER_PREFIX"fp7", REGISTER_PREFIX"argptr" }
@@ -899,7 +926,7 @@ do { if (cc_prev_status.flags & CC_IN_68881)			\
 
 /* On the Sun-3, the floating point registers have numbers
    18 to 25, not 16 to 23 as they do in the compiler.  */
-#define DBX_REGISTER_NUMBER(REGNO) ((REGNO) < 16 ? (REGNO) : (REGNO) + 2)
+#define DBX_REGISTER_NUMBER(REGNO) ((REGNO) < 32 ? (REGNO) : (REGNO) + 2)
 
 /* Before the prologue, RA is at 0(%sp).  */
 #define INCOMING_RETURN_ADDR_RTX \
@@ -921,9 +948,9 @@ do { if (cc_prev_status.flags & CC_IN_68881)			\
 /* The return column was originally 24, but gcc used 25 for a while too.
    Define both registers 24 and 25 as Pmode ones and use 24 in our own
    unwind information.  */
-#define DWARF_FRAME_REGISTERS 25
-#define DWARF_FRAME_RETURN_COLUMN 24
-#define DWARF_ALT_FRAME_RETURN_COLUMN 25
+#define DWARF_FRAME_REGISTERS 41
+#define DWARF_FRAME_RETURN_COLUMN 40
+#define DWARF_ALT_FRAME_RETURN_COLUMN 41
 
 /* Before the prologue, the top of the frame is at 4(%sp).  */
 #define INCOMING_FRAME_SP_OFFSET 4

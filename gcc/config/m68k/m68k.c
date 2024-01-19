@@ -74,6 +74,10 @@ enum reg_class regno_reg_class[] =
   DATA_REGS, DATA_REGS, DATA_REGS, DATA_REGS,
   ADDR_REGS, ADDR_REGS, ADDR_REGS, ADDR_REGS,
   ADDR_REGS, ADDR_REGS, ADDR_REGS, ADDR_REGS,
+  DATA_REGS, DATA_REGS, DATA_REGS, DATA_REGS,
+  DATA_REGS, DATA_REGS, DATA_REGS, DATA_REGS,
+  ADDR_REGS, ADDR_REGS, ADDR_REGS, ADDR_REGS,
+  ADDR_REGS, ADDR_REGS, ADDR_REGS, ADDR_REGS,
   FP_REGS, FP_REGS, FP_REGS, FP_REGS,
   FP_REGS, FP_REGS, FP_REGS, FP_REGS,
   ADDR_REGS
@@ -104,11 +108,11 @@ struct m68k_frame
 
   /* Data and address register.  */
   int reg_no;
-  unsigned int reg_mask;
+  unsigned long long reg_mask;
 
   /* FPU registers.  */
   int fpu_no;
-  unsigned int fpu_mask;
+  unsigned long long fpu_mask;
 
   /* Offsets relative to ARG_POINTER.  */
   HOST_WIDE_INT frame_pointer_offset;
@@ -894,7 +898,7 @@ static void
 m68k_compute_frame_layout (void)
 {
   int regno, saved;
-  unsigned int mask;
+  unsigned long long mask;
   enum m68k_function_kind func_kind =
     m68k_get_function_kind (current_function_decl);
   bool interrupt_handler = func_kind == m68k_fk_interrupt_handler;
@@ -912,10 +916,10 @@ m68k_compute_frame_layout (void)
 
   /* Interrupt thread does not need to save any register.  */
   if (!interrupt_thread)
-    for (regno = 0; regno < 16; regno++)
-      if (m68k_save_reg (regno, interrupt_handler))
+    for (regno = 0; regno < FP0_REG; regno++)
+      if (INT_REGNO_P(regno) && m68k_save_reg (regno, interrupt_handler))
 	{
-	  mask |= 1 << (regno - D0_REG);
+	  mask |= 1LL << (regno - D0_REG);
 	  saved++;
 	}
   current_frame.offset = saved * 4;
@@ -928,10 +932,10 @@ m68k_compute_frame_layout (void)
     {
       /* Interrupt thread does not need to save any register.  */
       if (!interrupt_thread)
-	for (regno = 16; regno < 24; regno++)
+	for (regno = FP0_REG; regno < FP0_REG + 8; regno++)
 	  if (m68k_save_reg (regno, interrupt_handler))
 	    {
-	      mask |= 1 << (regno - FP0_REG);
+	      mask |= 1LL << (regno - FP0_REG);
 	      saved++;
 	    }
       current_frame.foffset = saved * (flag_no_x_mode ? 8 : TARGET_FP_REG_SIZE);
@@ -990,7 +994,7 @@ m68k_save_reg (unsigned int regno, bool interrupt_handler)
   if (lookup_attribute ("entrypoint", attrs))
     return false;
 
-  if (regno != 15 && lookup_attribute ("saveallregs", attrs))
+  if (regno != SP_REG && lookup_attribute ("saveallregs", attrs))
     return true;
 
   if (flag_pic && regno == PIC_REG)
@@ -1060,6 +1064,9 @@ m68k_save_reg (unsigned int regno, bool interrupt_handler)
   return !call_used_regs[regno];
 }
 
+static void
+m68k_set_frame_related (rtx_insn *insn);
+
 /* Emit RTL for a MOVEM or FMOVEM instruction.  BASE + OFFSET represents
    the lowest memory address.  COUNT is the number of registers to be
    moved, with register REGNO + I being moved if bit I of MASK is set.
@@ -1070,11 +1077,71 @@ m68k_save_reg (unsigned int regno, bool interrupt_handler)
 static rtx_insn *
 m68k_emit_movem (rtx base, HOST_WIDE_INT offset,
 		 unsigned int count, unsigned int regno,
-		 unsigned int mask, bool store_p, bool adjust_stack_p)
+		 unsigned long long mask, bool store_p, bool adjust_stack_p)
 {
   int i;
   rtx body, addr, src, operands[2];
   machine_mode mode;
+
+  if (regno == D0_REG && (mask & 0xffff0000) != 0)
+    {
+      rtx bank;
+      rtx_insn * r;
+      unsigned long long lomask = mask >> 16;
+      int locount = __builtin_popcount (lomask);
+      rtx lobase = gen_rtx_REG(SImode, REGNO(base) % 16);
+      if (store_p)
+	{
+	  bank = gen_rtx_ASM_INPUT_loc(VOIDmode, REGNO(base) > STACK_POINTER_REGNUM
+		   	           ? ".short $7145" /* size 6 bytes, AA=01 BB=01*/
+				   : ".short $7141" /* size 6 bytes, AA=00 BB=01 */,
+				     DECL_SOURCE_LOCATION (current_function_decl));
+	  MEM_VOLATILE_P (bank) = 1;
+	  r = emit_insn(bank);
+	  m68k_set_frame_related (r);
+	  r = m68k_emit_movem(lobase, -locount * GET_MODE_SIZE(SImode), locount, regno, lomask, store_p, adjust_stack_p);
+
+	  if ((count -= locount) == 0)
+	    return r;
+
+	  m68k_set_frame_related (r);
+
+	  if (REGNO(base) > STACK_POINTER_REGNUM)
+	    {
+	      bank = gen_rtx_ASM_INPUT_loc(VOIDmode, ".short $7141" /* size 6 bytes, AA=00 BB=01 */, DECL_SOURCE_LOCATION (current_function_decl));
+ 	      MEM_VOLATILE_P (bank) = 1;
+ 	      r = emit_insn(bank);
+ 	      m68k_set_frame_related (r);
+	    }
+
+	  return m68k_emit_movem(lobase, -count * GET_MODE_SIZE(SImode), count, regno, mask & 0xffff, store_p, adjust_stack_p);
+	}
+
+      bank = gen_rtx_ASM_INPUT_loc(VOIDmode, REGNO(base) > STACK_POINTER_REGNUM
+			       ? ".short $7145" /* size 6 bytes, AA=01 BB=01*/
+			       : ".short $7144" /* size 6 bytes, AA=01 BB=00 */,
+				 DECL_SOURCE_LOCATION (current_function_decl));
+      MEM_VOLATILE_P (bank) = 1;
+      r = emit_insn(bank);
+      m68k_set_frame_related (r);
+
+
+      r = m68k_emit_movem(lobase, adjust_stack_p ? offset : -locount * GET_MODE_SIZE(SImode), locount, regno, lomask, store_p, adjust_stack_p);
+      if ((count -= locount) == 0)
+	return r;
+
+      m68k_set_frame_related (r);
+
+      if (REGNO(base) > STACK_POINTER_REGNUM)
+	{
+	  bank = gen_rtx_ASM_INPUT_loc(VOIDmode, ".short $7144" /* size 6 bytes, AA=01 BB=00 */, DECL_SOURCE_LOCATION (current_function_decl));
+	  MEM_VOLATILE_P (bank) = 1;
+	  r = emit_insn(bank);
+	  m68k_set_frame_related (r);
+	}
+
+      return m68k_emit_movem(lobase, adjust_stack_p ? offset : -(locount + count)* GET_MODE_SIZE(SImode), count, regno, mask & 0xffff, store_p, adjust_stack_p);
+    }
 
   body = gen_rtx_PARALLEL (VOIDmode, rtvec_alloc (adjust_stack_p + count));
   mode = reg_raw_mode[regno];
@@ -1228,7 +1295,7 @@ m68k_expand_prologue (void)
 	      int i;
 
 	      for (i = 16; i-- > 0; )
-		if (current_frame.fpu_mask & (1 << i))
+		if (current_frame.fpu_mask & (1LL << i))
 		  {
 		    src = gen_rtx_REG (DFmode, FP0_REG + i);
 		    dest = gen_frame_mem (DFmode,
@@ -1274,8 +1341,8 @@ m68k_expand_prologue (void)
       /* Store each register separately in the same order moveml does.  */
       int i;
 
-      for (i = 16; i-- > 0; )
-	if (current_frame.reg_mask & (1 << i))
+      for (i = FP0_REG; i-- > 0; )
+	if (current_frame.reg_mask & (1LL << i))
 	  {
 	    src = gen_rtx_REG (SImode, D0_REG + i);
 	    dest = gen_frame_mem (SImode,
@@ -1396,7 +1463,7 @@ m68k_expand_epilogue (bool sibcall_p)
       HOST_WIDE_INT offset;
 
       offset = current_frame.offset + fsize;
-      for (i = 0; i < 16; i++)
+      for (i = 0; i < FP0_REG; i++)
         if (current_frame.reg_mask & (1 << i))
           {
 	    rtx addr;
@@ -5978,7 +6045,7 @@ m68k_regno_mode_ok (int regno, machine_mode mode)
   if (DATA_REGNO_P (regno))
     {
       /* Data Registers, can hold aggregate if fits in.  */
-      if (regno + GET_MODE_SIZE (mode) / 4 <= 8)
+      if (DATA_REGNO_P (regno + (MAX(0, GET_MODE_SIZE (mode) - 1)) / 4))
 	return true;
     }
   else if (ADDRESS_REGNO_P (regno))
@@ -5988,8 +6055,10 @@ m68k_regno_mode_ok (int regno, machine_mode mode)
       if (TARGET_68881 && (GET_MODE_CLASS (mode) == MODE_FLOAT
 	   || GET_MODE_CLASS (mode) == MODE_COMPLEX_FLOAT))
 	return false;
-      if (regno + GET_MODE_SIZE (mode) / 4 <= 16)
-	return !frame_pointer_needed || regno != FRAME_POINTER_REGNUM;
+      if (ADDRESS_REGNO_P (regno + (MAX(0, GET_MODE_SIZE (mode) - 1)) / 4))
+	return !frame_pointer_needed ||
+	    (regno != FRAME_POINTER_REGNUM && regno + (MAX(0, GET_MODE_SIZE (mode) - 1)) / 4 != FRAME_POINTER_REGNUM &&
+	     regno != STACK_POINTER_REGNUM && regno + (MAX(0, GET_MODE_SIZE (mode) - 1)) / 4 != STACK_POINTER_REGNUM);
     }
   else if (FP_REGNO_P (regno))
     {
