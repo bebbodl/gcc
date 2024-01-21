@@ -119,7 +119,7 @@ Target RejectNegative Alias(mcpu=, 547x)
 Generate code for a ColdFire v4e.
 
 mcpu=
-Target RejectNegative Joined Enum(target_device) Var(m68k_cpu_option) Init(unk_device)
+Target RejectNegative Joined Enum(target_device) Var(m68k_cpu_option) Init(m68000)
 Specify the target CPU.
 
 mcpu32
@@ -197,3 +197,42 @@ Support more than 8192 GOT entries on ColdFire.
 mxtls
 Target Mask(XTLS)
 Support TLS segment larger than 64K.
+
+mregparm=
+Target RejectNegative Var(m68k_regparm) Joined UInteger Init(-1)
+Pass arguments through registers.
+
+mregparm
+Target RejectNegative Alias(mregparm=, 2)
+Same as -mregparm=2
+
+msasregparm
+Target RejectNegative Var(sas_regparm,1)
+Same as -mregparm=2 but do not use alternate registers
+
+fdouble-indirect
+Target Var(flag_double_indirect) Init(1)
+Use double indirect addressing mode.
+
+fbbb=
+Target RejectNegative Var(help_columns,80) Var(string_bbb_opts) Joined 
+Enable Bebbo's optimizations.\n
++    enable all optimizations (default)\n
+a    commute add move instructions\n
+b    use register for base addresses\n
+c    convert load const and compare into a sub\n
+e    eliminate dead assignments + redundant loads\n
+f    shrink stack frame\n
+i    use post increment on addresses\n
+l    remove single used lea if possible\n
+n    pipeline instructions\n
+m    merge add and move statements\n
+p    propagate move assignment pairs out of loops\n
+r    register renaming to maybe save registers\n
+s    a strcpy optimization\n
+z    final pass with simple substitutions\n
+0    insert clear registers before storing a byte or word, if possible\n
+v    be verbose\n
+V    be very verbose\n
+x    dump insns\n
+Default: -fbbb=+ which yields -fbbb=abcefilmnprsz0

@@ -180,6 +180,10 @@ prefix_from_string (const char *p, struct path_prefix *pprefix)
   startp = endp = p;
   while (1)
     {
+#ifdef __MSYS__
+      if (*endp == PATH_SEPARATOR && endp-startp == 1)
+	    ++endp;
+#endif
       if (*endp == PATH_SEPARATOR || *endp == 0)
 	{
 	  strncpy (nstore, startp, endp-startp);

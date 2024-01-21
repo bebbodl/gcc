@@ -435,7 +435,8 @@ along with GCC; see the file COPYING3.  If not see
   NEXT_PASS (pass_warn_function_noreturn);
 
   NEXT_PASS (pass_expand);
-
+  NEXT_PASS (pass_bbb_baserel);
+  
   NEXT_PASS (pass_rest_of_compilation);
   PUSH_INSERT_PASSES_WITHIN (pass_rest_of_compilation)
       NEXT_PASS (pass_instantiate_virtual_regs);

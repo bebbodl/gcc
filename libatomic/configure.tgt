@@ -134,6 +134,10 @@ case "${target}" in
 	config_path="${config_path} linux/aarch64 posix"
 	;;
 
+  *-*-amiga*)
+	config_path="${config_path} amigaos/loadstore amigaos/lock"
+  	;;
+
   arm*-*-linux* | arm*-*-uclinux*)
 	# OS support for atomic primitives.
 	config_path="${config_path} linux/arm posix"

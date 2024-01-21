@@ -69,3 +69,6 @@ stamp-*
 /mpc*
 /gmp*
 /isl*
+
+/.settings*
+/.cproject

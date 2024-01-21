@@ -510,6 +510,10 @@ struct c_declarator {
   location_t id_loc; /* Currently only set for cdk_id, cdk_array. */
   /* Except for cdk_id, the contained declarator.  For cdk_id, NULL.  */
   struct c_declarator *declarator;
+#ifdef TARGET_M68K
+  /* The optional asm spec to specify the register. */
+  tree asmspec;
+#endif
   union {
     /* For identifiers.  */
     struct {
@@ -560,6 +564,10 @@ struct c_parm {
   struct c_declarator *declarator;
   /* The location of the parameter.  */
   location_t loc;
+#ifdef TARGET_M68K
+  /* The optional asm spec to specify the register. */
+  tree asmspec;
+#endif
 };
 
 /* Used when parsing an enum.  Initialized by start_enum.  */

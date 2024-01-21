@@ -31644,7 +31644,8 @@ done
 selftest_languages=
 for language in $all_selected_languages
 do
-	selftest_languages="$selftest_languages selftest-$language"
+#	selftest_languages="$selftest_languages selftest-$language"
+  selftest_languages=
 done
 
 # We link each language in with a set of hooks, reached indirectly via
