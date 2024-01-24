@@ -29,3 +29,27 @@ sysroot-suffix.h: $(srcdir)/config/m68k/print-sysroot-suffix.sh
 	$(SHELL) $(srcdir)/config/m68k/print-sysroot-suffix.sh \
 	  "$(SYSTEM_HEADER_DIR)/../.." "$(MULTILIB_MATCHES)" \
 	  "$(MULTILIB_OPTIONS)" > $@
+
+EXTRA_OBJS += m68k2.o m68k_68000_10_costs.o m68k_68020_costs.o m68k_68030_costs.o m68k_68040_costs.o m68k_68080_costs.o
+
+# Extra object file linked to the cc1* executables.
+amigaos.o: $(srcdir)/config/m68k/amigaos.cc $(CONFIG_H)
+	$(CXX) -c $(ALL_CFLAGS) $(ALL_CPPFLAGS) $(INCLUDES) $< $(OUTPUT_OPTION)
+
+m68k2.o: $(srcdir)/config/m68k/m68k2.cc $(CONFIG_H)
+	$(CXX) -c $(ALL_CFLAGS) $(ALL_CPPFLAGS) $(INCLUDES) $< $(OUTPUT_OPTION)
+
+m68k_68000_10_costs.o: $(srcdir)/config/m68k/m68k_68000_10_costs.cc $(CONFIG_H)
+	$(CXX) -c $(ALL_CFLAGS) $(ALL_CPPFLAGS) $(INCLUDES) $< $(OUTPUT_OPTION)
+
+m68k_68020_costs.o: $(srcdir)/config/m68k/m68k_68020_costs.cc $(CONFIG_H)
+	$(CXX) -c $(ALL_CFLAGS) $(ALL_CPPFLAGS) $(INCLUDES) $< $(OUTPUT_OPTION)
+
+m68k_68030_costs.o: $(srcdir)/config/m68k/m68k_68030_costs.cc $(CONFIG_H)
+	$(CXX) -c $(ALL_CFLAGS) $(ALL_CPPFLAGS) $(INCLUDES) $< $(OUTPUT_OPTION)
+
+m68k_68040_costs.o: $(srcdir)/config/m68k/m68k_68040_costs.cc $(CONFIG_H)
+	$(CXX) -c $(ALL_CFLAGS) $(ALL_CPPFLAGS) $(INCLUDES) $< $(OUTPUT_OPTION)
+
+m68k_68080_costs.o: $(srcdir)/config/m68k/m68k_68080_costs.cc $(CONFIG_H)
+	$(CXX) -c $(ALL_CFLAGS) $(ALL_CPPFLAGS) $(INCLUDES) $< $(OUTPUT_OPTION)
