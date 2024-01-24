@@ -19,6 +19,12 @@ along with GCC; see the file COPYING3.  If not see
 
 #define TARGET_M68K 1
 
+#ifdef TARGET_AMIGAOS
+#define TARGET_AMIGA 1
+#else
+#define TARGET_AMIGA 0
+#endif
+
 /* We need to have MOTOROLA always defined (either 0 or 1) because we use
    if-statements and ?: on it.  This way we have compile-time error checking
    for both the MOTOROLA and MIT code paths.  We do rely on the host compiler
