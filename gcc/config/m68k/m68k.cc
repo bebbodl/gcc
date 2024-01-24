@@ -1190,7 +1190,7 @@ m68k_expand_prologue (void)
 			    current_frame.reg_mask, true, true));
     }
 
-  if (!TARGET_SEP_DATA && !TARGET_AMIGAOS
+  if (!TARGET_SEP_DATA && !TARGET_AMIGA
       && crtl->uses_pic_offset_table)
     emit_insn (gen_load_got (pic_offset_table_rtx));
 }
@@ -5657,7 +5657,7 @@ m68k_output_mi_thunk (FILE *file, tree thunk ATTRIBUTE_UNUSED,
     {
       gcc_assert (flag_pic);
 
-      if (!TARGET_SEP_DATA && !TARGET_AMIGAOS)
+      if (!TARGET_SEP_DATA && !TARGET_AMIGA)
 	{
 	  /* Use the static chain register as a temporary (call-clobbered)
 	     GOT pointer for this function.  We can use the static chain
