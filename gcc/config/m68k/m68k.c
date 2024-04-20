@@ -1753,9 +1753,26 @@ extern rtx_insn * current_insn;
 void
 output_dbcc_and_branch (rtx *operands)
 {
-  // add a check if the 2nd jmp label follows this dbcc
   char label_follows = false;
+  char label_is_inner_loop = false;
   rtx_insn * insn;
+
+  /* SBFF:
+   * This might affect some nested loops.
+   * In this case it's bad to pull up the dbf.
+   * => add a check if operand[2]== 2nd jmp label is found before any other label
+   */
+  for (insn = PREV_INSN(current_insn); insn; insn = PREV_INSN (insn))
+    {
+      if (LABEL_P(insn))
+	{
+      label_is_inner_loop = operands[2]->u2.insn_uid == insn->u2.insn_uid;
+	  break;
+	}
+    }
+
+  // add a check if the 2nd jmp label follows this dbcc
+  if (!label_is_inner_loop)
   for (insn = NEXT_INSN(current_insn); insn; insn = NEXT_INSN (insn))
     {
       if (LABEL_P(insn))
@@ -1767,7 +1784,53 @@ output_dbcc_and_branch (rtx *operands)
 	break;
     }
 
-  if (label_follows)
+  if (label_is_inner_loop)
+	    switch (GET_CODE (operands[3]))
+	      {
+		case EQ:
+		  output_asm_insn ("jeq %l2\n|\tdbf %0,%l1", operands);
+		  break;
+
+		case NE:
+			  output_asm_insn ("jne %l2\n|\tdbf %0,%l1", operands);
+		  break;
+
+		case GT:
+			  output_asm_insn ("jgt %l2\n|\tdbf %0,%l1", operands);
+		  break;
+
+		case GTU:
+			  output_asm_insn ("jhi %l2\n|\tdbf %0,%l1", operands);
+		  break;
+
+		case LT:
+			  output_asm_insn ("jlt %l2\n|\tdbf %0,%l1", operands);
+		  break;
+
+		case LTU:
+			  output_asm_insn ("jcs %l2\n|\tdbf %0,%l1", operands);
+		  break;
+
+		case GE:
+			  output_asm_insn ("jge %l2\n|\tdbf %0,%l1", operands);
+		  break;
+
+		case GEU:
+			  output_asm_insn ("jcc %l2\n|\tdbf %0,%l1", operands);
+		  break;
+
+		case LE:
+			  output_asm_insn ("jle %l2\n|\tdbf %0,%l1", operands);
+		  break;
+
+		case LEU:
+			  output_asm_insn ("jls %l2\n|\tdbf %0,%l1", operands);
+		  break;
+
+		default:
+		  gcc_unreachable ();
+	      }
+  else if (label_follows)
     switch (GET_CODE (operands[3]))
       {
 	case EQ:
@@ -6017,6 +6080,9 @@ m68k_secondary_reload_class (enum reg_class rclass,
   if (!MEM_P(x) && amiga_is_const_pic_ref(x))
     return rclass == ADDR_REGS ? NO_REGS : ADDR_REGS;
 #endif
+
+  if (rclass == ADDR_REGS)
+	  return NO_REGS;
 
   regno = true_regnum (x);
 
