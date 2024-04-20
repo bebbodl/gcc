@@ -18,6 +18,9 @@
 # code, 0 otherwise.
 
 proc check_effective_target_fsanitize_undefined {} {
+    if { [istarget *-*-amigaos] } {
+	return 0;
+    }
     return [check_runtime fsanitize_undefined {
 	int main (void) { return 0; }
     } "-fsanitize=undefined"]

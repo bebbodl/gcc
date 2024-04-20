@@ -87,6 +87,10 @@ libdecnumber.a: $(libdecnumber_a_OBJS)
 	$(AR) $(ARFLAGS) $@ $(libdecnumber_a_OBJS)
 	$(RANLIB) $@
 
+libdecnumber.dll: $(libcpp_a_OBJS)
+	rm -rf $@
+	$(CXX) -o $@ -shared $(libdecnumber_a_OBJS) 
+
 # Rules to rebuild the configuration
 
 Makefile: $(srcdir)/Makefile.in config.status

@@ -411,6 +411,9 @@ clean-noinstLTLIBRARIES:
 libbacktrace.la: $(libbacktrace_la_OBJECTS) $(libbacktrace_la_DEPENDENCIES) $(EXTRA_libbacktrace_la_DEPENDENCIES) 
 	$(LINK)  $(libbacktrace_la_OBJECTS) $(libbacktrace_la_LIBADD) $(LIBS)
 
+libbacktrace.dll: libbacktrace.la
+	$(CC) $(patsubst %.lo,%.o,$(libbacktrace_la_OBJECTS) $(libbacktrace_la_LIBADD)) -shared -o $@
+
 clean-checkPROGRAMS:
 	@list='$(check_PROGRAMS)'; test -n "$$list" || exit 0; \
 	echo " rm -f" $$list; \

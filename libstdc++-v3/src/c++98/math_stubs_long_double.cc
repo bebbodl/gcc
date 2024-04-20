@@ -27,7 +27,7 @@
 // For targets which do not have support for long double versions,
 // we use the following crude approximations. We keep saying that we'll do
 // better later, but never do.
-
+#ifndef __AMIGA__
 extern "C" 
 {
 #ifndef _GLIBCXX_HAVE_FABSL
@@ -222,3 +222,4 @@ extern "C"
   }
 #endif
 } // extern "C"
+#endif

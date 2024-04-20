@@ -5469,9 +5469,11 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
   stod(const string& __str, size_t* __idx = 0)
   { return __gnu_cxx::__stoa(&std::strtod, "stod", __str.c_str(), __idx); }
 
+#ifdef _HAVE_LONG_DOUBLE
   inline long double
   stold(const string& __str, size_t* __idx = 0)
   { return __gnu_cxx::__stoa(&std::strtold, "stold", __str.c_str(), __idx); }
+#endif
 #endif // _GLIBCXX_USE_C99_STDLIB
 
 #if _GLIBCXX_USE_C99_STDIO
@@ -5575,9 +5577,11 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
   stod(const wstring& __str, size_t* __idx = 0)
   { return __gnu_cxx::__stoa(&std::wcstod, "stod", __str.c_str(), __idx); }
 
+#ifdef _HAVE_LONG_DOUBLE
   inline long double
   stold(const wstring& __str, size_t* __idx = 0)
   { return __gnu_cxx::__stoa(&std::wcstold, "stold", __str.c_str(), __idx); }
+#endif
 
 #ifndef _GLIBCXX_HAVE_BROKEN_VSWPRINTF
   // DR 1261.

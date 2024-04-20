@@ -22,6 +22,9 @@
    see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
    <http://www.gnu.org/licenses/>.  */
 
+#pragma GCC push_options
+#pragma GCC optimize ("-O2")
+
 #include "tconfig.h"
 #include "tsystem.h"
 #include "coretypes.h"
@@ -260,6 +263,9 @@ _Unwind_GetCFA (struct _Unwind_Context *context)
 }
 
 /* Overwrite the saved value for register INDEX in CONTEXT with VAL.  */
+#if defined(TARGET_AMIGAOS)
+static int overregs[16];
+#endif
 
 inline void
 _Unwind_SetGR (struct _Unwind_Context *context, int index, _Unwind_Word val)
@@ -271,6 +277,9 @@ _Unwind_SetGR (struct _Unwind_Context *context, int index, _Unwind_Word val)
   gcc_assert (index < (int) sizeof(dwarf_reg_size_table));
   size = dwarf_reg_size_table[index];
 
+#if defined(TARGET_AMIGAOS)
+  overregs[index] = val;
+#endif
   if (_Unwind_IsExtendedContext (context) && context->by_value[index])
     {
       context->reg[index] = _Unwind_Get_Unwind_Context_Reg_Val (val);
@@ -278,6 +287,9 @@ _Unwind_SetGR (struct _Unwind_Context *context, int index, _Unwind_Word val)
     }
 
   ptr = (void *) (_Unwind_Internal_Ptr) context->reg[index];
+
+  if (!ptr)
+    return;
 
   if (size == sizeof(_Unwind_Ptr))
     * (_Unwind_Ptr *) ptr = val;
@@ -1612,10 +1624,10 @@ _Unwind_DebugHook (void *cfa __attribute__ ((__unused__)),
    macro because __builtin_eh_return must be invoked in the context of
    our caller.  */
 
-#define uw_install_context(CURRENT, TARGET)				\
+#define uw_install_context(CURRENT, TARGET, INDEX)				\
   do									\
     {									\
-      long offset = uw_install_context_1 ((CURRENT), (TARGET));		\
+      long offset = uw_install_context_1 ((CURRENT), (TARGET), (INDEX));		\
       void *handler = __builtin_frob_return_addr ((TARGET)->ra);	\
       _Unwind_DebugHook ((TARGET)->cfa, handler);			\
       __builtin_eh_return (offset, handler);				\
@@ -1624,7 +1636,8 @@ _Unwind_DebugHook (void *cfa __attribute__ ((__unused__)),
 
 static long
 uw_install_context_1 (struct _Unwind_Context *current,
-		      struct _Unwind_Context *target)
+		      struct _Unwind_Context *target,
+		      int index ATTRIBUTE_UNUSED)
 {
   long i;
   _Unwind_SpTmp sp_slot;
@@ -1659,7 +1672,75 @@ uw_install_context_1 (struct _Unwind_Context *current,
       else if (t && c && t != c)
 	memcpy (c, t, dwarf_reg_size_table[i]);
     }
+#if defined(TARGET_AMIGAOS)
+  /* SBF: evil hack to patch the values for d0/d1 into the stack location.
+   * search the movem insn and count the saved regs.
+   * Now patch the values into location.
+   * Always patch d0/d1 since override is always invoked for d0/d1.
+   * Then patch all other regs which the above code omitted.
+   */
+  /* uw_install_context_1 is called from 4 different locations - each uses an unique index.
+   * So initialization is only done once.
+   */
+  static unsigned short counts[4];
+  static unsigned short masks[4];
 
+  unsigned short count = 0;
+  unsigned short reg_mask = masks[index];
+  /* init each index once. */
+  if (!reg_mask)
+    {
+      /* get the return address.*/
+      unsigned short * sp = *(((unsigned short **)&current) - 1);
+      /* search the movem -x(a5),regs insn.*/
+      for (;;)
+	{
+	  unsigned short s = *sp++;
+//      printf("%04x ", s);
+	  gcc_assert(s != (unsigned short)0x4e75);// hit return? ouch!
+	  if (s == (unsigned short)0x4ced)
+	    break;
+	}
+      reg_mask = *sp;
+      /* count saved regs */
+      for (unsigned short i = 0, m = reg_mask; i < 16; ++i)
+	{
+	  if (m & 1)
+	  ++count;
+	  m >>= 1;
+	}
+      masks[index] = reg_mask;
+      counts[index] = count;
+    }
+  else
+    count = counts[index];
+
+  /* regs are saved below local vars -> start at current */
+  int * p = ((int *)current) - count;
+
+  for (unsigned short i = 0, m = reg_mask; i < 16; ++i)
+    {
+      if (m & 1)
+	{
+	  if (i <= 1 || (!current->reg[i] && (target->reg[i] || target->by_value[i])))
+	    {
+	      int old = *p;
+	      /* not set by the code above - set it here */
+	      if (i <= 1) // use the override values for d0/d1
+	        *p = overregs[i];
+	      else
+	      if (target->by_value[i])
+	        *p = (int)target->reg[i];
+	      else
+	        *p = *(int*)target->reg[i];
+//	      printf("patch reg %d from %08lx to %08lx\n", i, old, *p);
+	    }
+	  ++p;
+	}
+      m >>= 1;
+    }
+
+#endif
   /* If the current frame doesn't have a saved stack pointer, then we
      need to rely on EH_RETURN_STACKADJ_RTX to get our target stack
      pointer value reloaded.  */
@@ -1713,3 +1794,5 @@ alias (_Unwind_SetIP);
 #endif
 
 #endif /* !USING_SJLJ_EXCEPTIONS */
+
+#pragma GCC pop_options

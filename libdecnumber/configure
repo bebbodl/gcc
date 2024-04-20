@@ -4900,7 +4900,15 @@ else
   PICFLAG=
 fi
 
-
+case $host_os in
+    amigaos*)
+      case $host_cpu in
+      m68k)
+        PICFLAG=
+      ;;
+    esac
+  ;;
+esac
 
 # Output.
 

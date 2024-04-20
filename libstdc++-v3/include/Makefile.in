@@ -13,6 +13,8 @@
 # even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 # PARTICULAR PURPOSE.
 
+UNAME := $(shell uname)
+
 @SET_MAKE@
 VPATH = @srcdir@
 am__make_dryrun = \
@@ -1230,6 +1232,7 @@ thread_host_headers = \
 	${host_builddir}/gthr-posix.h \
 	${host_builddir}/gthr-default.h
 
+ifeq (,$(findstring MSYS,$(UNAME)))
 pch1_source = ${glibcxx_srcdir}/include/precompiled/stdc++.h
 pch1_output_builddir = ${host_builddir}/stdc++.h.gch
 pch1_output_anchor = ${host_builddir}/stdc++.h
@@ -1257,6 +1260,7 @@ pch_output_anchors = \
 PCHFLAGS = -x c++-header -nostdinc++ $(CXXFLAGS) $(VTV_PCH_CXXFLAGS)
 @GLIBCXX_BUILD_PCH_FALSE@pch_build = 
 @GLIBCXX_BUILD_PCH_TRUE@pch_build = ${pch_output}
+endif
 
 # List of all timestamp files.  By keeping only one copy of this list, both
 # CLEANFILES and all-local are kept up-to-date.
@@ -1713,6 +1717,7 @@ ${host_builddir}/gthr-default.h: ${toplevel_srcdir}/libgcc/${thread_header} \
 	    -e 's,^#include "\(.*\)",#include <bits/\1>,g' \
 	    < $< > $@
 
+ifeq (,$(findstring MSYS,$(UNAME)))
 # Build two precompiled C++ includes, stdc++.h.gch/*.gch
 ${pch1a_output}: ${allstamped} ${host_builddir}/c++config.h ${pch1_source}
 	-mkdir -p ${pch1_output_builddir}
@@ -1732,6 +1737,7 @@ ${pch2_output}: ${pch2_source} ${pch1_output}
 ${pch3_output}: ${pch3_source} ${pch2_output}
 	-mkdir -p ${pch3_output_builddir}
 	$(CXX) $(PCHFLAGS) $(AM_CPPFLAGS) -O2 -g ${pch3_source} -o $@
+endif
 
 # For robustness sake (in light of junk files or in-source
 # configuration), copy from the build or source tree to the install
@@ -1859,9 +1865,14 @@ install-headers:
 	for file in ${ext_host_headers}; do \
 	  $(INSTALL_DATA) $${file} $(DESTDIR)${host_installdir}/../ext; done
 
+ifeq (,$(findstring MSYS,$(UNAME)))
 # To remove directories.
 clean-local:
 	rm -rf ${pch_output_dirs}
+else
+clean-local:
+	echo nada
+endif
 
 # Stop implicit '.o' make rules from ever stomping on extensionless
 # headers, in the improbable case where some foolish, crack-addled

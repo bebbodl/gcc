@@ -5,6 +5,10 @@
 extern void abort (void);
 
 #define N 4096
+
+#if defined(__baserel__) && !defined(__baserel32__)
+__far
+#endif
 int a[N], c[N];
 unsigned int b[N], d[N];
 

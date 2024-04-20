@@ -73,7 +73,7 @@ extern char *canonicalize_file_name (const char *);
 #endif
 
 char *
-lrealpath (const char *filename)
+__xlrealpath (const char *filename)
 {
   /* Method 1: The system has a compile time upper bound on a filename
      path.  Use that and realpath() to canonicalize the name.  This is
@@ -154,4 +154,43 @@ lrealpath (const char *filename)
 
   /* This system is a lost cause, just duplicate the filename.  */
   return strdup (filename);
+}
+
+
+char *
+lrealpath (const char *filename)
+{
+#ifdef __MSYS__
+  /* MSYS does not treat paths with drives correctly.
+   * 
+   *   convert c:/foo to /c/foo
+   */
+  char * tmp;
+  if (filename[0] && filename[1] == ':')
+    {
+      char letter[3] = {'/', filename[0], 0};
+      tmp = filename = concat(letter, &filename[2], 0);
+    }
+#endif
+
+  char * r = __xlrealpath(filename);
+#if defined (_WIN32)
+  if (strncmp(r, "/cygdrive/", 10) == 0)
+    {
+      r[9] = r[10];
+      r[10] = ':';
+      r = strdup(&r[9]);
+    }
+#endif
+#ifdef __MSYS__
+  if (tmp)
+    {
+     /* 
+      *   convert it back /c/foo to c:/foo 
+      */
+      char drive[3] = { r[1], ':', 0};
+      r = concat(drive, &r[2], 0);
+    }
+#endif
+  return r;
 }

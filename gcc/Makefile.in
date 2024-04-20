@@ -385,7 +385,17 @@ enable_host_shared = @enable_host_shared@
 
 enable_as_accelerator = @enable_as_accelerator@
 
+ifeq ($(DLL),)
 CPPLIB = ../libcpp/libcpp.a
+else
+CPPLIB = libcpp.dll
+
+LDFLAGS += -Xlinker --allow-multiple-definition
+
+DLLYANG = dllyang.o
+DLLYING = dllying.o
+
+endif
 CPPINC = -I$(srcdir)/../libcpp/include
 
 # Where to find decNumber
@@ -393,12 +403,20 @@ enable_decimal_float = @enable_decimal_float@
 DECNUM = $(srcdir)/../libdecnumber
 DECNUMFMT = $(srcdir)/../libdecnumber/$(enable_decimal_float)
 DECNUMINC = -I$(DECNUM) -I$(DECNUMFMT) -I../libdecnumber
+ifeq ($(DLL),)
 LIBDECNUMBER = ../libdecnumber/libdecnumber.a
+else
+LIBDECNUMBER = libdecnumber.dll
+endif
 
 # The backtrace library.
 BACKTRACE = $(srcdir)/../libbacktrace
 BACKTRACEINC = -I$(BACKTRACE)
+ifeq ($(DLL),)
 LIBBACKTRACE = ../libbacktrace/.libs/libbacktrace.a
+else
+LIBBACKTRACE = libbacktrace.dll
+endif
 
 # Target to use when installing include directory.  Either
 # install-headers-tar, install-headers-cpio or install-headers-cp.
@@ -1018,12 +1036,29 @@ ifeq ($(enable_host_shared),yes)
 LIBIBERTY = ../libiberty/pic/libiberty.a
 BUILD_LIBIBERTY = $(build_libobjdir)/libiberty/pic/libiberty.a
 else
+
+ifeq ($(DLL),)
 LIBIBERTY = ../libiberty/libiberty.a
+else
+LIBIBERTY = libiberty.dll
+endif
+
+ifeq ($(DLL),)
+LIBCOMMON = libcommon.a
+LIBCOMMON_TARGET = libcommon-target.a
+LIBBACKEND = libbackend.a
+else
+LIBCOMMON = libcommon.dll
+LIBCOMMON_TARGET = libcommon-target.dll
+LIBBACKEND = libbackend.dll
+endif
+
+
 BUILD_LIBIBERTY = $(build_libobjdir)/libiberty/libiberty.a
 endif
 
 # Dependencies on the intl and portability libraries.
-LIBDEPS= libcommon.a $(CPPLIB) $(LIBIBERTY) $(LIBINTL_DEP) $(LIBICONV_DEP) \
+LIBDEPS= $(LIBCOMMON) $(CPPLIB) $(LIBIBERTY) $(LIBINTL_DEP) $(LIBICONV_DEP) \
 	$(LIBDECNUMBER) $(LIBBACKTRACE)
 
 # Likewise, for use in the tools that must run on this machine
@@ -1032,7 +1067,7 @@ BUILD_LIBDEPS= $(BUILD_LIBIBERTY)
 
 # How to link with both our special library facilities
 # and the system's installed libraries.
-LIBS = @LIBS@ libcommon.a $(CPPLIB) $(LIBINTL) $(LIBICONV) $(LIBBACKTRACE) \
+LIBS = @LIBS@ $(LIBCOMMON) $(CPPLIB) $(LIBINTL) $(LIBICONV) $(LIBBACKTRACE) \
 	$(LIBIBERTY) $(LIBDECNUMBER) $(HOST_LIBS)
 BACKENDLIBS = $(ISLLIBS) $(GMPLIBS) $(PLUGINLIBS) $(HOST_LIBS) \
 	$(ZLIB)
@@ -1171,7 +1206,7 @@ C_COMMON_OBJS = c-family/c-common.o c-family/c-cppbuiltin.o c-family/c-dump.o \
   c-family/c-ppoutput.o c-family/c-pragma.o c-family/c-pretty-print.o \
   c-family/c-semantics.o c-family/c-ada-spec.o \
   c-family/c-cilkplus.o \
-  c-family/array-notation-common.o c-family/cilk.o c-family/c-ubsan.o
+  c-family/array-notation-common.o c-family/cilk.o c-family/c-ubsan.o $(DLLYING)
 
 # Language-independent object files.
 # We put the *-match.o and insn-*.o files first so that a parallel make
@@ -1199,6 +1234,8 @@ OBJS = \
 	auto-inc-dec.o \
 	auto-profile.o \
 	bb-reorder.o \
+	bbb-baserel.o \
+	bbb-opts.o \
 	bitmap.o \
 	bt-load.o \
 	builtins.o \
@@ -1537,7 +1574,8 @@ OBJS = \
 	xcoffout.o \
 	$(out_object_file) \
 	$(EXTRA_OBJS) \
-	$(host_hook_obj)
+	$(host_hook_obj) \
+	$(DLLYING) $(DLLYANG)
 
 # Objects in libcommon.a, potentially used by all host binaries and with
 # no target dependencies.
@@ -1564,7 +1602,7 @@ ALL_HOST_BACKEND_OBJS = $(GCC_OBJS) $(OBJS) $(OBJS-libcommon) \
 # compilation or not.
 ALL_HOST_OBJS = $(ALL_HOST_FRONTEND_OBJS) $(ALL_HOST_BACKEND_OBJS)
 
-BACKEND = libbackend.a main.o libcommon-target.a libcommon.a \
+BACKEND = $(LIBBACKEND) main.o $(LIBCOMMON_TARGET) $(LIBCOMMON) \
 	$(CPPLIB) $(LIBDECNUMBER)
 
 # This is defined to "yes" if Tree checking is enabled, which roughly means
@@ -1588,8 +1626,8 @@ MOSTLYCLEANFILES = insn-flags.h insn-config.h insn-codes.h \
  gcc-ranlib$(exeext) \
  gcov-iov$(build_exeext) gcov$(exeext) gcov-dump$(exeext) \
  gcov-tool$(exeect) \
- gengtype$(exeext) *.[0-9][0-9].* *.[si] *-checksum.c libbackend.a \
- libcommon-target.a libcommon.a libgcc.mk
+ gengtype$(exeext) *.[0-9][0-9].* *.[si] *-checksum.c $(LIBBACKEND) \
+ $(LIBCOMMON_TARGET) libcommon.a libgcc.mk
 
 # This symlink makes the full installation name of the driver be available
 # from within the *build* directory, for use when running the JIT library
@@ -1849,32 +1887,53 @@ libbackend.a: $(OBJS)
 	$(AR) $(AR_FLAGS) libbackend.a $(OBJS)
 	-$(RANLIB) $(RANLIB_FLAGS) libbackend.a
 
+libbackend.dll: $(OBJS) libcommon.dll libcommon-target.dll libdecnumber.dll libiberty.dll
+	$(CXX) -shared -o $@ $(OBJS) libiberty.dll libcommon.dll libcommon-target.dll libdecnumber.dll -lz -lmpc -lmpfr -lgmp dllyang.o -Xlinker --allow-multiple-definition 
+
 libcommon-target.a: $(OBJS-libcommon-target)
 	-rm -rf libcommon-target.a
 	$(AR) $(AR_FLAGS) libcommon-target.a $(OBJS-libcommon-target)
 	-$(RANLIB) $(RANLIB_FLAGS) libcommon-target.a
 
+libcommon-target.dll: $(OBJS-libcommon-target)
+	$(CXX) -shared -o $@ $(OBJS-libcommon-target) libiberty.dll libcommon.dll
+
 libcommon.a: $(OBJS-libcommon)
 	-rm -rf libcommon.a
 	$(AR) $(AR_FLAGS) libcommon.a $(OBJS-libcommon)
 	-$(RANLIB) $(RANLIB_FLAGS) libcommon.a
+	
+libcommon.dll: $(OBJS-libcommon) libiberty.dll
+	$(MAKE) -C ../libbacktrace/ libbacktrace.dll DLL=1 
+	cp ../libbacktrace/libbacktrace.dll .
+	$(CXX) -shared -o $@ $(OBJS-libcommon) libiberty.dll libbacktrace.dll ../libcpp/libcpp.a -liconv
+	make -C ../libcpp/ libcpp.dll DLL=1
+	cp ../libcpp/libcpp.dll .
+
+libdecnumber.dll:
+	$(MAKE) -C ../libdecnumber libdecnumber.dll DLL=1
+	cp ../libdecnumber/libdecnumber.dll .
+
+libiberty.dll:
+	$(MAKE) -C ../libiberty/ libiberty.dll DLL=1 
+	cp ../libiberty/libiberty.dll .
 
 # We call this executable `xgcc' rather than `gcc'
 # to avoid confusion if the current directory is in the path
 # and CC is `gcc'.  It is renamed to `gcc' when it is installed.
-xgcc$(exeext): $(GCC_OBJS) c/gccspec.o libcommon-target.a $(LIBDEPS) \
+xgcc$(exeext): $(GCC_OBJS) c/gccspec.o $(LIBCOMMON_TARGET) $(LIBDEPS) \
 	$(EXTRA_GCC_OBJS)
 	+$(LINKER) $(ALL_LINKERFLAGS) $(LDFLAGS) -o $@ $(GCC_OBJS) \
-	  c/gccspec.o $(EXTRA_GCC_OBJS) libcommon-target.a \
+	  c/gccspec.o $(EXTRA_GCC_OBJS) $(LIBCOMMON_TARGET) \
 	  $(EXTRA_GCC_LIBS) $(LIBS)
 
 # cpp is to cpp0 as e.g. g++ is to cc1plus: Just another driver.
 # It is part of c-family because the handled extensions are hard-coded
 # and only contain c-family extensions (see known_suffixes).
-cpp$(exeext): $(GCC_OBJS) c-family/cppspec.o libcommon-target.a $(LIBDEPS) \
+cpp$(exeext): $(GCC_OBJS) c-family/cppspec.o $(LIBCOMMON_TARGET) $(LIBDEPS) \
 	$(EXTRA_GCC_OBJS)
 	+$(LINKER) $(ALL_LINKERFLAGS) $(LDFLAGS) -o $@ $(GCC_OBJS) \
-	  c-family/cppspec.o $(EXTRA_GCC_OBJS) libcommon-target.a \
+	  c-family/cppspec.o $(EXTRA_GCC_OBJS) $(LIBCOMMON_TARGET) \
 	  $(EXTRA_GCC_LIBS) $(LIBS)
 
 # Dump a specs file to make -B./ read these specs over installed ones.
@@ -1986,7 +2045,7 @@ gcc-nm.c: gcc-ar.c
 	cp $^ $@
 
 COLLECT2_OBJS = collect2.o collect2-aix.o tlink.o vec.o ggc-none.o \
-  collect-utils.o file-find.o hash-table.o
+  collect-utils.o file-find.o hash-table.o $(EXTRA_COLLECT2_OBJS)
 COLLECT2_LIBS = @COLLECT2_LIBS@
 collect2$(exeext): $(COLLECT2_OBJS) $(LIBDEPS)
 # Don't try modifying collect2 (aka ld) in place--it might be linking this.
@@ -1998,9 +2057,9 @@ CFLAGS-collect2.o += -DTARGET_MACHINE=\"$(target_noncanonical)\" \
 	@TARGET_SYSTEM_ROOT_DEFINE@
 
 LTO_WRAPPER_OBJS = lto-wrapper.o collect-utils.o ggc-none.o
-lto-wrapper$(exeext): $(LTO_WRAPPER_OBJS) libcommon-target.a $(LIBDEPS)
+lto-wrapper$(exeext): $(LTO_WRAPPER_OBJS) $(LIBCOMMON_TARGET) $(LIBDEPS)
 	+$(LINKER) $(ALL_COMPILERFLAGS) $(LDFLAGS) -o T$@ \
-	   $(LTO_WRAPPER_OBJS) libcommon-target.a $(LIBS)
+	   $(LTO_WRAPPER_OBJS) $(LIBCOMMON_TARGET) $(LIBS)
 	mv -f T$@ $@
 
 # Files used by all variants of C or by the stand-alone pre-processor.
@@ -3270,7 +3329,7 @@ endif
 install-strip: install
 
 # Handle cpp installation.
-install-cpp: installdirs cpp$(exeext)
+install-cpp: installdirs cpp$(exeext) all.cross
 	-if test "$(enable_as_accelerator)" != "yes" ; then \
 	  rm -f $(DESTDIR)$(bindir)/$(CPP_INSTALL_NAME)$(exeext); \
 	  $(INSTALL_PROGRAM) -m 755 cpp$(exeext) $(DESTDIR)$(bindir)/$(CPP_INSTALL_NAME)$(exeext); \

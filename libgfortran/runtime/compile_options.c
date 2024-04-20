@@ -29,7 +29,7 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 /* Useful compile-time options will be stored in here.  */
 compile_options_t compile_options;
 
-#ifndef LIBGFOR_MINIMAL
+#if !defined(LIBGFOR_MINIMAL) && !defined(__AMIGA__)
 static volatile sig_atomic_t fatal_error_in_progress = 0;
 
 
@@ -167,7 +167,7 @@ set_options (int num, int options[])
   if (num >= 9)
     compile_options.fpe_summary = options[8];
 
-#ifndef LIBGFOR_MINIMAL
+#if !defined(LIBGFOR_MINIMAL) && !defined(__AMIGA__)
   /* If backtrace is required, we set signal handlers on the POSIX
      2001 signals with core action.  */
   if (compile_options.backtrace)

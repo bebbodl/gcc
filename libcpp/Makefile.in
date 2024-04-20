@@ -101,6 +101,10 @@ libcpp.a: $(libcpp_a_OBJS)
 	$(AR) $(ARFLAGS) libcpp.a $(libcpp_a_OBJS)
 	$(RANLIB) libcpp.a
 
+libcpp.dll: $(libcpp_a_OBJS)
+	rm -rf $@
+	$(CXX) -o $@ -shared $(libcpp_a_OBJS) ../libiberty/libiberty.dll ../gcc/libcommon.dll -liconv
+
 # Rules to rebuild the configuration
 
 Makefile: $(srcdir)/Makefile.in config.status

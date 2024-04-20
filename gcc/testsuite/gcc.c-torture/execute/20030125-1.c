@@ -1,6 +1,8 @@
 /* Verify whether math functions are simplified.  */
 /* { dg-require-effective-target c99_runtime } */
 /* { dg-require-weak } */
+/* { dg-skip-if "No math insns" { *-*-amigaos } "*" "" } */
+
 double sin(double);
 double floor(double);
 float 

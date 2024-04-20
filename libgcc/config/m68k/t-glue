@@ -1,0 +1,13 @@
+LIB2ADD += $(srcdir)/config/m68k/gmon.c 
+
+new_op.o: $(srcdir)/config/m68k/new_op.c
+	$(CC) $(CFLAGS) -c $< 
+
+libnew_op.a: new_op.o
+	$(AR) rcs libnew_op.a new_op.o
+
+EXTRA_PARTS=libnew_op.a
+
+# On Amiga, specifying -fnon-call-exceptions will needlessly pull in
+# the unwinder in simple programs which use 64-bit division.
+LIB2_DIVMOD_EXCEPTION_FLAGS := -fno-exceptions

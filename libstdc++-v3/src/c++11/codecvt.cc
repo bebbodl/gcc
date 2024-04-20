@@ -733,6 +733,10 @@ namespace
 
 locale::id codecvt<char16_t, char, mbstate_t>::id;
 
+codecvt<char16_t, char, mbstate_t>::codecvt(size_t __refs)
+      : __codecvt_abstract_base<char16_t, char, mbstate_t>(__refs)
+{}
+
 codecvt<char16_t, char, mbstate_t>::~codecvt() { }
 
 codecvt_base::result
@@ -809,6 +813,10 @@ codecvt<char16_t, char, mbstate_t>::do_max_length() const throw()
 // Converts from UTF-8 to UTF-32 (aka UCS-4).
 
 locale::id codecvt<char32_t, char, mbstate_t>::id;
+
+codecvt<char32_t, char, mbstate_t>::codecvt(size_t __refs)
+: __codecvt_abstract_base<char32_t, char, mbstate_t>(__refs) { }
+
 
 codecvt<char32_t, char, mbstate_t>::~codecvt() { }
 

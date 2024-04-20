@@ -6503,6 +6503,9 @@ proc check_effective_target_lto { } {
     if { [istarget nvptx-*-*] } {
 	return 0;
     }
+    if { [istarget *-*-amigaos] } {
+	return 0;
+    }
     return [check_no_compiler_messages lto object {
 	void foo (void) { }
     } "-flto"]

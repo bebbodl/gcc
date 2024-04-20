@@ -705,7 +705,9 @@ extern void stack_limit_increase (unsigned long);
    USE_C_ALLOCA yourself.  The canonical autoconf macro C_ALLOCA is
    also set/unset as it is often used to indicate whether code needs
    to call alloca(0).  */
+#ifndef _MSC_VER
 extern void *C_alloca (size_t) ATTRIBUTE_MALLOC;
+#endif
 #undef alloca
 #if GCC_VERSION >= 2000 && !defined USE_C_ALLOCA
 # define alloca(x) __builtin_alloca(x)
@@ -716,6 +718,8 @@ extern void *C_alloca (size_t) ATTRIBUTE_MALLOC;
    char *const libiberty_nptr = (char *const) alloca (libiberty_len); \
    (char *) memcpy (libiberty_nptr, libiberty_optr, libiberty_len); }))
 #else
+void * C_alloca(unsigned int size);
+
 # define alloca(x) C_alloca(x)
 # undef USE_C_ALLOCA
 # define USE_C_ALLOCA 1

@@ -440,6 +440,9 @@ static inline void
 fde_split (struct object *ob, fde_compare_t fde_compare,
 	   struct fde_vector *linear, struct fde_vector *erratic)
 {
+#ifdef __amiga__
+__near
+#endif
   static const fde *marker;
   size_t count = linear->count;
   const fde *const *chain_end = &marker;
@@ -749,6 +752,9 @@ init_object (struct object* ob)
 	  count = classify_object_over_fdes (ob, ob->u.single);
 	  if (count == (size_t) -1)
 	    {
+#ifdef __amiga__
+__near
+#endif
 	      static const fde terminator;
 	    unhandled_fdes:
 	      ob->s.i = 0;

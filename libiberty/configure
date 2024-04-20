@@ -5090,6 +5090,9 @@ fi
 
 case "${host}" in
     # PIC is the default on some targets or must not be used.
+    *-*-amigaos*)
+    	PICFLAG=
+    	;;
     *-*-darwin*)
 	# For darwin, common symbols are not allowed in MH_DYLIB files
 	case "${CFLAGS}" in

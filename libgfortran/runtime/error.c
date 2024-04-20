@@ -175,7 +175,9 @@ sys_abort (void)
       || (options.backtrace == -1 && compile_options.backtrace == 1))
     {
       estr_write ("\nProgram aborted. Backtrace:\n");
+#ifndef __AMIGA__
       show_backtrace (false);
+#endif
       signal (SIGABRT, SIG_DFL);
     }
 
@@ -193,7 +195,9 @@ exit_error (int status)
       || (options.backtrace == -1 && compile_options.backtrace == 1))
     {
       estr_write ("\nError termination. Backtrace:\n");
+#ifndef __AMIGA__
       show_backtrace (false);
+#endif
     }
   exit (status);
 }

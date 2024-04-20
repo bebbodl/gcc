@@ -1,7 +1,7 @@
 /* PR tree-optimization/36008 */
 
 extern void abort (void);
-
+int d[48] = {0};
 int g[48][3][3];
 
 void __attribute__ ((noinline))

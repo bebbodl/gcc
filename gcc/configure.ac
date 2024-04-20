@@ -1733,10 +1733,19 @@ EOF
 gcc_config_arguments_str=`cat conftest.out`
 rm -f conftest.out
 
+if test x$thread_file = xposix
+then
+	posix_def=1
+else
+    posix_def=0
+fi
+
 cat > configargs.h <<EOF
 /* Generated automatically. */
 static const char configuration_arguments[] = "$gcc_config_arguments_str";
 static const char thread_model[] = "$thread_file";
+
+#define __POSIX_THREADS__ $posix_def
 
 static const struct {
   const char *name, *value;

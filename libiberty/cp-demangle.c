@@ -2250,6 +2250,9 @@ d_ctor_dtor_name (struct d_info *di)
                   ::= u <source-name>
 */
 
+#ifdef __amiga__
+__near
+#endif
 CP_STATIC_IF_GLIBCPP_V3
 const struct demangle_builtin_type_info
 cplus_demangle_builtin_types[D_BUILTIN_TYPE_COUNT] =

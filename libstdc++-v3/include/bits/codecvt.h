@@ -298,7 +298,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
     protected:
       virtual
-      ~codecvt() { }
+      ~codecvt();
 
       virtual result
       do_out(state_type& __state, const intern_type* __from,
@@ -478,8 +478,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       static locale::id			id;
 
       explicit
-      codecvt(size_t __refs = 0)
-      : __codecvt_abstract_base<char16_t, char, mbstate_t>(__refs) { }
+      codecvt(size_t __refs = 0);
 
     protected:
       virtual
@@ -535,8 +534,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       static locale::id			id;
 
       explicit
-      codecvt(size_t __refs = 0)
-      : __codecvt_abstract_base<char32_t, char, mbstate_t>(__refs) { }
+      codecvt(size_t __refs = 0);
 
     protected:
       virtual

@@ -115,6 +115,10 @@ choose_tmpdir (void)
 #ifdef VMS
       /* Try VMS standard temp logical.  */
       base = try_dir ("/sys$scratch", base);
+#elif defined(__amiga__)
+      if (!memoized_tmpdir)
+	memoized_tmpdir = xstrdup("T:");
+      return memoized_tmpdir;
 #else
       base = try_dir (getenv ("TMPDIR"), base);
       base = try_dir (getenv ("TMP"), base);

@@ -8638,6 +8638,7 @@ $as_echo_n "checking for $compiler option to produce PIC... " >&6; }
             # adding the `-m68020' flag to GCC prevents building anything better,
             # like `-m68040'.
             lt_prog_compiler_pic='-m68020 -resident32 -malways-restore-a4'
+            enable_shared=no
         ;;
       esac
       ;;
@@ -28885,6 +28886,10 @@ else
 
 # Base decisions on target environment.
 case "${host}" in
+  m68k-*-*)
+  	# Nothing to do here.
+  	;;
+
   arm*-*-symbianelf*)
     # This is a freestanding configuration; there is nothing to do here.
     ;;

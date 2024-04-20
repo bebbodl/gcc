@@ -11717,6 +11717,15 @@ else
   PIC_FLAG=
 fi
 
+case $host_os in
+    amigaos*)
+      case $host_cpu in
+      m68k)
+        PIC_FLAG=
+      ;;
+    esac
+  ;;
+esac
 
 
 # Test for __sync support.

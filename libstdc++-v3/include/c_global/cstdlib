@@ -249,8 +249,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
   using ::strtoull;
 #endif
   using ::strtof;
+#ifdef _HAVE_LONG_DOUBLE
   using ::strtold;
-
+#endif
 _GLIBCXX_END_NAMESPACE_VERSION
 } // namespace __gnu_cxx
 
@@ -269,7 +270,9 @@ namespace std
   using ::__gnu_cxx::strtof;
   using ::__gnu_cxx::strtoll;
   using ::__gnu_cxx::strtoull;
+#ifdef _HAVE_LONG_DOUBLE
   using ::__gnu_cxx::strtold;
+#endif
 } // namespace std
 
 #endif // _GLIBCXX_USE_C99_STDLIB

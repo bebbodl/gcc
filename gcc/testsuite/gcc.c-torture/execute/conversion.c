@@ -543,7 +543,7 @@ main()
 {
   test_integer_to_float();
   test_float_to_integer();
-#if __GNUC__
+#if __GNUC__ && !defined(__AMIGA__)
   test_longlong_integer_to_float();
   test_float_to_longlong_integer();
 #endif

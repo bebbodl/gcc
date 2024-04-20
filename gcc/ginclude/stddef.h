@@ -325,6 +325,7 @@ typedef __rune_t        rune_t;
 #define __WCHAR_TYPE__ int
 #endif
 #ifndef __cplusplus
+#define _WCHAR_T_ int
 typedef __WCHAR_TYPE__ wchar_t;
 #endif
 #endif

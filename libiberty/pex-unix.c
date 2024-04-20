@@ -584,6 +584,19 @@ pex_unix_exec_child (struct pex_obj *obj ATTRIBUTE_UNUSED,
   return (pid_t) -1;
 }
 
+#elif defined(__amiga__)
+static pid_t
+pex_unix_exec_child (struct pex_obj *obj, int flags, const char *executable,
+		     char * const * argv, char * const * env,
+                     int in, int out, int errdes,
+		     int toclose, const char **errmsg, int *err)
+{
+  int r = execv(executable, argv);
+//  printf("pex_unix_exec_child %s %p -> %d\n", executable, argv, r);
+  *err = r;
+  *errmsg = 0;
+  return r ? -1 : 0;
+}
 #else
 /* Implementation of pex->exec_child using standard vfork + exec.  */
 
@@ -734,6 +747,11 @@ pex_unix_wait (struct pex_obj *obj, pid_t pid, int *status,
      status for some reason, encourage the process to go away.  */
   if (done)
     kill (pid, SIGTERM);
+
+#ifdef __amiga__
+  *status = *err = 0;
+  return 0;
+#endif
 
   if (pex_wait (obj, pid, status, time) < 0)
     {

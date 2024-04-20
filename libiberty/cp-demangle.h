@@ -180,6 +180,9 @@ extern const struct demangle_operator_info cplus_demangle_operators[];
 
 #define D_BUILTIN_TYPE_COUNT (33)
 
+#ifdef __amiga__
+__near
+#endif
 CP_STATIC_IF_GLIBCPP_V3
 const struct demangle_builtin_type_info
 cplus_demangle_builtin_types[D_BUILTIN_TYPE_COUNT];

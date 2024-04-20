@@ -51,12 +51,15 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   const size_t ctype<char>::table_size;
 
+#ifndef __AMIGA__
+/* moved to ctype_configure_char */
   ctype<char>::~ctype()
   { 
     _S_destroy_c_locale(_M_c_locale_ctype);
     if (_M_del) 
       delete[] this->table(); 
   }
+#endif
 
   // Fill in the narrowing cache and flag whether all values are
   // valid or not.  _M_narrow_ok is set to 2 if memcpy can't
