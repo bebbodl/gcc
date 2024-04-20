@@ -4958,6 +4958,23 @@ do_self_spec (const char *spec)
     }
 }
 
+static void normalize(char * path)
+{
+  // normalize
+  char *q, *p = path;
+//  printf("path: <%s>\t", path);
+  while ((q = strstr (p, "/../")))
+	{
+	  char *r = q - 1;
+	  while (r >= p && *r != '/' && *r != ':')
+	    --r;
+	  if (r < p)
+	    break;
+	  memmove (r + 1, q + 4, strlen (q + 4) + 1);
+	}
+//  printf("-> <%s>\n", path);
+}
+
 /* Callback for processing %D and %I specs.  */
 
 struct spec_path_info {
@@ -10107,3 +10124,23 @@ driver_get_configure_time_options (void (*cb) (const char *option,
   obstack_free (&obstack, NULL);
   n_switches = 0;
 }
+#if defined(TARGET_AMIGAOS)
+const char * amiga_m68k_prefix_func(int argc, const char ** argv) {
+  char * p;
+  if (standard_libexec_prefix)
+      p = make_relative_prefix(standard_libexec_prefix, "", "m68k-amigaos/");
+  else
+    p = concat("../../../../", "", NULL);
+
+  for (int i = 0; i < argc; ++i) {
+      char * q = concat(p, argv[i], NULL);
+      free(p);
+      p = q;
+  }
+
+  normalize(p);
+
+//  printf("amiga_m68k_prefix_func='%s'\n", p);
+  return p;
+}
+#endif

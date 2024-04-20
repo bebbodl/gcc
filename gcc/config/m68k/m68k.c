@@ -115,28 +115,16 @@ struct m68k_frame
 };
 
 /* Current frame information calculated by m68k_compute_frame_layout().  */
-static struct m68k_frame current_frame;
+struct m68k_frame current_frame;
 
-/* Structure describing an m68k address.
-
-   If CODE is UNKNOWN, the address is BASE + INDEX * SCALE + OFFSET,
-   with null fields evaluating to 0.  Here:
-
-   - BASE satisfies m68k_legitimate_base_reg_p
-   - INDEX satisfies m68k_legitimate_index_reg_p
-   - OFFSET satisfies m68k_legitimate_constant_address_p
-
-   INDEX is either HImode or SImode.  The other fields are SImode.
-
-   If CODE is PRE_DEC, the address is -(BASE).  If CODE is POST_INC,
-   the address is (BASE)+.  */
-struct m68k_address {
-  enum rtx_code code;
-  rtx base;
-  rtx index;
+struct m68k_address_part {
+  rtx * mem_loc;
+  rtx * base_loc;
+  rtx * index_loc;
   rtx offset;
   int scale;
 };
+
 
 static int m68k_sched_adjust_cost (rtx_insn *, rtx, rtx_insn *, int);
 static int m68k_sched_issue_rate (void);
@@ -322,6 +310,10 @@ static void m68k_init_sync_libfuncs (void) ATTRIBUTE_UNUSED;
 #undef TARGET_ATOMIC_TEST_AND_SET_TRUEVAL
 #define TARGET_ATOMIC_TEST_AND_SET_TRUEVAL 128
 
+#if defined(TARGET_AMIGAOS)
+#include "amigaos.h"
+#endif
+
 static const struct attribute_spec m68k_attribute_table[] =
 {
   /* { name, min_len, max_len, decl_req, type_req, fn_type_req, handler,
@@ -340,13 +332,27 @@ struct gcc_target targetm = TARGET_INITIALIZER;
 /* Base flags for 68k ISAs.  */
 #define FL_FOR_isa_00    FL_ISA_68000
 #define FL_FOR_isa_10    (FL_FOR_isa_00 | FL_ISA_68010)
-/* FL_68881 controls the default setting of -m68881.  gcc has traditionally
+/* "FL_68881 controls the default setting of -m68881.  gcc has traditionally
    generated 68881 code for 68020 and 68030 targets unless explicitly told
-   not to.  */
+   not to."
+
+   This is not true at least for the AMIGA.
+   gcc 2.93 does not set the 68881 flag.
+
+   */
+#if defined(TARGET_AMIGAOS)
+#define FL_FOR_isa_20    (FL_FOR_isa_10 | FL_ISA_68020 \
+			  | FL_BITFIELD)
+#else
 #define FL_FOR_isa_20    (FL_FOR_isa_10 | FL_ISA_68020 \
 			  | FL_BITFIELD | FL_68881 | FL_CAS)
+#endif
 #define FL_FOR_isa_40    (FL_FOR_isa_20 | FL_ISA_68040)
 #define FL_FOR_isa_cpu32 (FL_FOR_isa_10 | FL_ISA_68020)
+
+#define FL_FOR_isa_60    (FL_FOR_isa_20 | FL_ISA_68060)
+#define FL_FOR_isa_80    (FL_FOR_isa_20 | FL_ISA_68080)
+
 
 /* Base flags for ColdFire ISAs.  */
 #define FL_FOR_isa_a     (FL_COLDFIRE | FL_ISA_A)
@@ -363,6 +369,8 @@ enum m68k_isa
   isa_10,
   isa_20,
   isa_40,
+  isa_60,
+  isa_80,
   isa_cpu32,
   /* ColdFire instruction set variants.  */
   isa_a,
@@ -1953,6 +1961,431 @@ m68k_jump_table_ref_p (rtx x)
   insn = next_nonnote_insn (insn);
   return insn && JUMP_TABLE_DATA_P (insn);
 }
+
+/**
+ * Return true, if x is a valid offset for a decomposed address.
+ */
+static bool is_valid_offset(rtx x)
+{
+  if (GET_CODE(x) == CONST)
+    x = XEXP(x, 0);
+  if (GET_CODE(x) == CONST_INT || GET_CODE(x) == UNSPEC)
+    return true;
+  if ((GET_CODE(x) == SYMBOL_REF || GET_CODE(x) == LABEL_REF) && TARGET_68020)
+    return true;
+  if (GET_CODE(x) != PLUS)
+    return false;
+  return is_valid_offset(XEXP(x, 0)) && is_valid_offset(XEXP(x, 1));
+}
+
+static bool
+decompose_one(rtx * loc, struct m68k_address_part *address);
+
+/**
+ * decode the nested rtx structure into a flat structure.
+ *
+ * this function does not validate anything.
+ * it relies on the fact that gcc provides max one
+ * - index
+ * - base
+ * - offset
+ * per level
+ *
+ */
+static bool
+decompose_one(rtx * loc, struct m68k_address_part *address)
+{
+  rtx x = *loc;
+
+  while (GET_CODE(x) == CONST)
+    {
+      loc = &XEXP(x, 0);
+      x = *loc;
+    }
+
+  if (REG_P(x))
+    {
+      // try to use the base slot
+      if (!address->base_loc)
+	{
+	  address->base_loc = loc;
+	  return true;
+	}
+
+      // try to use the index slot
+      if (!address->index_loc)
+	{
+	  address->index_loc = loc;
+	  address->scale = 1;
+	  return true;
+	}
+      return false;
+    }
+
+  /** index register with scale */
+  if (GET_CODE(x) == MULT || GET_CODE(x) == ASHIFT || GET_CODE(x) == SIGN_EXTEND || GET_CODE(x) == SUBREG
+//      || (GET_CODE(x) == PLUS && REG_P(XEXP(x,0)) && XEXP(x,0) == XEXP(x,1)))// *2 as x+x
+    )
+    {
+      int scale = 1;
+      rtx r = x;
+
+      if (GET_CODE(x) == PLUS)
+	{
+          loc = &XEXP(r, 0);
+	  r = *loc;
+	  scale = 2;
+	}
+      else if (GET_CODE(x) == ASHIFT)
+	{
+	  loc = &XEXP(x, 0);
+	  r = *loc;
+	  rtx n = XEXP(x, 1);
+	  if (GET_CODE(n) != CONST_INT)
+	    return false;
+
+	  scale = 1 << INTVAL(n);
+	}
+      else if (GET_CODE(x) == MULT)
+      	{
+      	  loc = &XEXP(x, 0);
+      	  r = *loc;
+      	  rtx n = XEXP(x, 1);
+      	  if (GET_CODE(n) != CONST_INT)
+      	    return false;
+
+      	  scale = INTVAL(n);
+      	}
+
+      if (scale != 1 && scale != 2 && scale != 4 && scale != 8)
+	return false;
+
+      if (GET_CODE(r) == SIGN_EXTEND)
+	{
+	  r = XEXP(r, 0);
+	  if (GET_MODE(r) != HImode && GET_MODE(r) != SImode)
+	    return false;
+	}
+
+      // only one index allowed
+      if (address->index_loc)
+	return false;
+
+      address->index_loc = loc;
+      address->scale = scale;
+      return true;
+    }
+
+  if (GET_CODE(x) == PLUS)
+    {
+      // the single & is mandatory since address must be fully filled
+      return decompose_one(&XEXP(x,0), address)
+	  &  decompose_one(&XEXP(x,1), address);
+    }
+
+  // add const_int / symbol_refs...
+  if (is_valid_offset(x))
+    {
+      rtx da = address->offset;
+
+      if (da)
+	{
+	  if (CONST_INT_P (x) && CONST_INT_P (da))
+	    x = GEN_INT (INTVAL(x) + INTVAL (da));
+	  else
+	    x = gen_rtx_PLUS(SImode, da, x);
+	}
+
+      address->offset = x;
+      return true;
+    }
+
+  // contains a double indirect address.
+  if (MEM_P(x))
+    {
+      if (!flag_double_indirect)
+	return false;
+      // plus (mem) (mem)  does not work either
+      if (address->mem_loc)
+	return false;
+
+      address->mem_loc = loc;
+      ++address;
+      if (address->mem_loc == (rtx *)-1)
+	return false;
+      return decompose_one(&XEXP(x,0), address);
+    }
+  return false;
+}
+
+int decompose_mem(int reach, rtx *_x, struct m68k_address * address, int strict_p)
+{
+  struct m68k_address_part ap_data[5];
+  memset(ap_data, 0, sizeof(ap_data));
+  ap_data[4].mem_loc = (rtx *)-1;
+
+  rtx x = *_x;
+
+  // not an address
+  if (GET_CODE(x) == SIGN_EXTEND)
+    return false;
+
+  struct m68k_address_part * ap = &ap_data[0];
+  bool r = true;
+
+  if (PRE_DEC == GET_CODE(x) || POST_INC == GET_CODE(x))
+    {
+      address->code = GET_CODE(x);
+      address->base_loc = &XEXP(x, 0);
+      address->base = XEXP(x, 0);
+      return m68k_legitimate_base_reg_p(x, strict_p);
+    }
+
+  r &= decompose_one(_x, ap);
+  if (!r)
+      return false;
+
+  // now convert ap[0] / ap[1] into the address
+  if (ap->mem_loc)
+    {
+      m68k_address_part * ap2 = &ap[1];
+      address->code = MEM;
+      address->mem_loc = ap->mem_loc;
+
+      // outer base is never set
+      if (ap->base_loc && !ap->index_loc)
+	{
+	  ap->index_loc = ap->base_loc;
+	  ap->scale = 1;
+	  ap->base_loc = NULL;
+	}
+
+      if ( ap2->mem_loc
+	  || (ap->index_loc && ap2->index_loc)
+	  || ap->base_loc)
+	{
+	  address->code = POST_MODIFY; // this is a marker for reload: must not appear there
+	  r = false;
+	}
+
+      if (ap->index_loc)
+	{
+	  address->outer_index_loc = ap->index_loc;
+	  address->outer_index = *ap->index_loc;
+	  address->outer_scale = ap->scale;
+	  r &= m68k_legitimate_index_reg_p(address->outer_index, strict_p);
+	}
+      if (ap2->base_loc)
+	{
+	  address->base_loc = ap2->base_loc;
+	  address->base = *ap2->base_loc;
+	  if (!m68k_legitimate_base_reg_p(*ap2->base_loc, strict_p))
+	    {
+	      if (!ap2->index_loc && !ap->index_loc)
+		{
+		  // use index instead
+		  ap2->index_loc = ap2->base_loc;
+		  ap2->base_loc = NULL;
+		  ap2->scale = 1;
+
+		  address->base_loc = NULL;
+		  address->base = NULL;
+		}
+	      else
+	      if (ap2->index_loc && ap2->scale == 1 && m68k_legitimate_base_reg_p(*ap2->index_loc, strict_p))
+		{
+		  // swap
+		  address->base_loc = ap2->index_loc;
+		  address->base = *ap2->index_loc;
+
+		  ap2->index_loc = ap2->base_loc;
+		  ap2->base_loc = address->base_loc;
+		}
+	      else
+		r = false;
+	    }
+	}
+      if (ap2->index_loc)
+	{
+	  address->index_loc = ap2->index_loc;
+	  address->index = *ap2->index_loc;
+	  address->scale = ap2->scale;
+	  r &= m68k_legitimate_index_reg_p(address->index, strict_p);
+	}
+
+      address->outer_offset = ap->offset;
+      address->offset = ap2->offset;
+    }
+  else
+    {
+      if (ap->index_loc && ap->scale <= 1 && !ap->base_loc)
+	{
+	  ap->base_loc = ap->index_loc;
+	  ap->index_loc = 0;
+	}
+      // only ap is used -> simply transfer the set values
+      if (ap->base_loc)
+	{
+	  address->base_loc = ap->base_loc;
+	  address->base = *ap->base_loc;
+
+	  if (!m68k_legitimate_base_reg_p(address->base, strict_p))
+	    {
+	      if (ap->index_loc && ap->scale == 1 && m68k_legitimate_base_reg_p(*ap->index_loc, strict_p))
+		    {
+		      // swap
+		      address->base_loc = ap->index_loc;
+		      address->base = *ap->index_loc;
+
+		      ap->index_loc = ap->base_loc;
+		    }
+		  else
+		    r = false;
+		}
+	}
+      if (ap->index_loc)
+	{
+	  address->index_loc = ap->index_loc;
+	  address->index = *ap->index_loc;
+	  address->scale = ap->scale;
+	  r &= m68k_legitimate_index_reg_p(address->index, strict_p);
+	}
+      address->offset = ap->offset;
+    }
+
+    // force use of a single address register.
+    if (address->index && address->scale == 1 && !address->base)
+      {
+	address->base = address->index;
+	address->base_loc = address->index_loc;
+
+	address->index = 0;
+	address->index_loc = 0;
+      }
+
+//  static int nnn;
+//  fprintf(stderr, "%08d %d ", ++nnn, r);
+//  debug_rtx(x);
+
+  // disallow indirect mem addresses for too large stuff - handling overlaps is too tough.
+  if (reach > 4 && address->code == MEM)
+    return false;
+
+//  // double indirect is slower...
+//  if (address->code == MEM && optimize_function_for_speed_p(cfun))
+//	return false;
+
+  if (!TARGET_68020)
+    {
+      if (!address->base && address->index)
+	{
+	  // necessary to support reload.
+	  address->base = address->index;
+	  address->base_loc = address->index_loc;
+	  address->index = 0;
+	  address->index_loc = 0;
+	  return false;
+	}
+
+      // 68k has no support for indirect
+      if (address->code) {
+	  address->code = POST_MODIFY;
+	return false;
+      }
+      // 68k has no support for a missing base register
+      if (!address->base)
+	return false;
+
+      // only const_int offsets in range, if base and index are set
+      if (address->index && address->offset && !(
+	    (GET_CODE(address->offset) == CONST_INT && IN_RANGE (INTVAL (address->offset), -0x8000, 0x8000 - reach))
+	 || GET_CODE(address->offset) == UNSPEC
+	 || (GET_CODE(address->offset) == PLUS && GET_CODE(XEXP(address->offset,0)) == UNSPEC)
+	  ))
+	return false;
+
+      // also only scale 1 is supported.
+      if (address->index && address->scale > 1)
+	return false;
+
+      if (address->index)
+	{
+	  // index requires an offset.
+	  if (!address->offset)
+	    address->offset = CONST0_RTX(SImode);
+	  // with a small offset.
+	  if (GET_CODE(address->offset) != CONST_INT || !IN_RANGE (INTVAL (address->offset), -0x80, 0x80 - reach))
+	    return false;
+	}
+
+      if (address->offset && GET_CODE(address->offset) == CONST_INT && !IN_RANGE (INTVAL (address->offset), -0x8000, 0x8000 - reach))
+	return false;
+    }
+
+  return r;
+}
+
+extern bool m68k_is_SI_memory_operand_to_HI_allowed(rtx x)
+{
+  struct m68k_address address;
+  memset (&address, 0, sizeof (address));
+  return decompose_mem(4, &x, &address, true);
+
+}
+
+static rtx address_to_rtx(struct m68k_address * address)
+{
+  rtx x = address->index;
+  if (address->base)
+    {
+      if (x)
+	x = gen_rtx_PLUS(SImode, x, address->base);
+      else
+	x = address->base;
+    }
+  if (address->offset)
+    {
+      if (x)
+	x = gen_rtx_PLUS(SImode, x, address->offset);
+      else
+	x = address->offset;
+    }
+  if (address->code == MEM)
+    {
+      x = gen_rtx_MEM(SImode, x);
+
+      if (address->outer_index)
+	x = gen_rtx_PLUS(SImode, x, address->outer_index);
+
+      if (address->outer_offset)
+	x = gen_rtx_PLUS(SImode, x, address->outer_offset);
+    }
+  return x;
+}
+
+extern rtx m68k_SI_memory_operand_to_HI(rtx x)
+{
+  struct m68k_address address;
+  memset (&address, 0, sizeof (address));
+  if (!decompose_mem(4, &x, &address, true))
+    return 0;
+
+  rtx * p = address.code == MEM ? address.outer_index_loc : address.index_loc;
+
+  if (address.offset)
+    {
+      if (GET_CODE(*p) == CONST_INT)
+	*p = GEN_INT(INTVAL(*p) + 2);
+      else
+	*p = gen_rtx_PLUS(SImode, *p, GEN_INT(2));
+    }
+  else
+    *p = GEN_INT(2);
+
+  return gen_rtx_MEM(HImode, address_to_rtx(&address));
+}
+
+
 
 /* Return true if X is a legitimate address for values of mode MODE.
    STRICT_P says whether strict checking is needed.  If the address

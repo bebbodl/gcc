@@ -26,6 +26,8 @@ along with GCC; see the file COPYING3.  If not see
 # define MOTOROLA 0  /* Use the MIT assembly syntax.  */
 #endif
 
+#define TARGET_M68K 1
+ 
 /* Handle --with-cpu default option from configure script.  */
 #define OPTION_DEFAULT_SPECS						\
   { "cpu",   "%{!m68020-40:%{!m68020-60:\
@@ -86,7 +88,9 @@ along with GCC; see the file COPYING3.  If not see
 	case u68060:							\
 	  builtin_define_std ("mc68060");				\
 	  break;							\
-									\
+	case u68080:							\
+	  builtin_define_std ("mc68080");				\
+	  break;							\
 	case u68020_60:							\
 	  builtin_define_std ("mc68060");				\
 	  /* Fall through.  */						\
@@ -220,18 +224,23 @@ along with GCC; see the file COPYING3.  If not see
 #define FL_ISA_68010 (1 << 10)
 #define FL_ISA_68020 (1 << 11)
 #define FL_ISA_68040 (1 << 12)
-#define FL_ISA_A     (1 << 13)
-#define FL_ISA_APLUS (1 << 14)
-#define FL_ISA_B     (1 << 15)
-#define FL_ISA_C     (1 << 16)
-#define FL_FIDOA     (1 << 17)
-#define FL_CAS	     (1 << 18)	/* Support cas insn.  */
+#define FL_ISA_68060 (1 << 13)
+#define FL_ISA_68080 (1 << 14)
+#define FL_ISA_A     (1 << 15)
+#define FL_ISA_APLUS (1 << 16)
+#define FL_ISA_B     (1 << 17)
+#define FL_ISA_C     (1 << 18)
+#define FL_FIDOA     (1 << 19)
+#define FL_CAS	     (1 << 20)	/* Support cas insn.  */
 #define FL_MMU 	     0   /* Used by multilib machinery.  */
 #define FL_UCLINUX   0   /* Used by multilib machinery.  */
 
+#define TARGET_68000		((m68k_cpu_flags & FL_ISA_68000) != 0)
 #define TARGET_68010		((m68k_cpu_flags & FL_ISA_68010) != 0)
 #define TARGET_68020		((m68k_cpu_flags & FL_ISA_68020) != 0)
 #define TARGET_68040		((m68k_cpu_flags & FL_ISA_68040) != 0)
+#define TARGET_68060		((m68k_cpu_flags & FL_ISA_68060) != 0)
+#define TARGET_68080		((m68k_cpu_flags & FL_ISA_68080) != 0)
 #define TARGET_COLDFIRE		((m68k_cpu_flags & FL_COLDFIRE) != 0)
 #define TARGET_COLDFIRE_FPU	(m68k_fpu == FPUTYPE_COLDFIRE)
 #define TARGET_68881		(m68k_fpu == FPUTYPE_68881)
@@ -246,21 +255,28 @@ along with GCC; see the file COPYING3.  If not see
 #define TARGET_ISAC		((m68k_cpu_flags & FL_ISA_C) != 0)
 
 /* Some instructions are common to more than one ISA.  */
-#define ISA_HAS_MVS_MVZ	(TARGET_ISAB || TARGET_ISAC)
+#define ISA_HAS_MVS_MVZ	(TARGET_ISAB || TARGET_ISAC || TARGET_68080)
 #define ISA_HAS_FF1	(TARGET_ISAAPLUS || TARGET_ISAC)
 #define ISA_HAS_TAS	(!TARGET_COLDFIRE || TARGET_ISAB || TARGET_ISAC)
 
 #define TUNE_68000	(m68k_tune == u68000)
 #define TUNE_68010	(m68k_tune == u68010)
 #define TUNE_68000_10	(TUNE_68000 || TUNE_68010)
+#define TUNE_68020	(m68k_tune == u68020 \
+			 || m68k_tune == u68020_40 \
+			 || m68k_tune == u68020_60)
 #define TUNE_68030	(m68k_tune == u68030 \
 			 || m68k_tune == u68020_40 \
 			 || m68k_tune == u68020_60)
 #define TUNE_68040	(m68k_tune == u68040 \
 			 || m68k_tune == u68020_40 \
 			 || m68k_tune == u68020_60)
-#define TUNE_68060	(m68k_tune == u68060 || m68k_tune == u68020_60)
 #define TUNE_68040_60	(TUNE_68040 || TUNE_68060)
+#define TUNE_68060	(m68k_tune == u68060)
+#define TUNE_68080	(m68k_tune == u68080)
+#define TUNE_68020_80	(TUNE_68020 || TUNE_68030 || TUNE_68040 || TUNE_68060 || TUNE_68080)
+#define TUNE_68040_80	(TUNE_68040 || TUNE_68060 || TUNE_68080)
+#define TUNE_68060_80	(TUNE_68060 || TUNE_68080)
 #define TUNE_CPU32	(m68k_tune == ucpu32)
 #define TUNE_CFV1       (m68k_tune == ucfv1)
 #define TUNE_CFV2	(m68k_tune == ucfv2)
@@ -522,6 +538,17 @@ extern enum reg_class regno_reg_class[];
 /* On the m68k, the offset starts at 0.  */
 #define INIT_CUMULATIVE_ARGS(CUM, FNTYPE, LIBNAME, INDIRECT, N_NAMED_ARGS) \
  ((CUM) = 0)
+
+/* Max. number of data, address and float registers to be used for passing
+   integer, pointer and float arguments when TARGET_REGPARM.
+   It's 4, so d0-d3, a0-a3 and fp0-fp3 can be used.  */
+#undef M68K_MAX_REGPARM
+#define M68K_MAX_REGPARM 4
+
+/* The default number of data, address and float registers to use when
+   user specified '-mregparm' switch, not '-mregparm=<value>' option.  */
+#undef M68K_DEFAULT_REGPARM
+#define M68K_DEFAULT_REGPARM 2
 
 #define FUNCTION_PROFILER(FILE, LABELNO)  \
   asm_fprintf (FILE, "\tlea %LLP%d,%Ra0\n\tjsr mcount\n", (LABELNO))
@@ -971,3 +998,45 @@ extern int m68k_sched_address_bypass_p (rtx_insn *, rtx_insn *);
 extern int m68k_sched_indexed_address_bypass_p (rtx_insn *, rtx_insn *);
 
 #define CPU_UNITS_QUERY 1
+
+/* Structure describing an m68k address.
+
+   If CODE is UNKNOWN, the address is BASE + INDEX * SCALE + OFFSET,
+   with null fields evaluating to 0.  Here:
+
+   - BASE satisfies m68k_legitimate_base_reg_p
+   - INDEX satisfies m68k_legitimate_index_reg_p
+   - OFFSET satisfies m68k_legitimate_constant_address_p
+   - OUTER_INDEX satisfies m68k_legitimate_index_reg_p
+   - OUTER_OFFSET satisfies m68k_legitimate_constant_address_p
+
+   INDEX is either HImode or SImode.  The other fields are SImode.
+
+   If CODE is PRE_DEC, the address is -(BASE).  If CODE is POST_INC,
+   the address is (BASE)+.
+
+   If CODE is MEM, then it's a double indirect address
+   and the outer_index or outer_offset may be used.
+
+   MEM_LOC contains the address of the inner MEM. This is needed by reload
+   if reload needs to reload the inner MEM, if OFFSET plus OUTER_OFFSET are in use.
+
+   BASE_LOC contains the address of BASE - needed by reload.
+   INDEX_LOC contains the address of INDEX - also needed by reload.
+*/
+struct m68k_address {
+  int code;
+  rtx * mem_loc;
+  rtx base;
+  rtx * base_loc;
+  rtx index;
+  rtx * index_loc;
+  int scale;
+  rtx offset;
+  rtx outer_index;
+  rtx * outer_index_loc;
+  int outer_scale;
+  rtx outer_offset;
+};
+
+int decompose_mem(int reach, rtx * x, struct m68k_address * address, int strict_p);

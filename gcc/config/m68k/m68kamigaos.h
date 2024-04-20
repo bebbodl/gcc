@@ -229,6 +229,9 @@ amiga_declare_object = 0
   asm_output_aligned_bss (FILE, DECL, NAME, SIZE, ALIGN)
 #endif
 
+#ifndef __POSIX_THREADS__
+#define __POSIX_THREADS__ 0
+#endif
 
 /* Specs, switches.  */
 

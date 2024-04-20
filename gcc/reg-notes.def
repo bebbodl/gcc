@@ -211,3 +211,6 @@ REG_NOTE (RETURNED)
    The decl might not be available in the call due to splitting of the call
    insn.  This note is a SYMBOL_REF.  */
 REG_NOTE (CALL_DECL)
+
+/* Used to track mask of the used bits.  This note is a CONST_INT.  */
+REG_NOTE (BIT_MASK)

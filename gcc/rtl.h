@@ -348,7 +348,8 @@ struct GTY((desc("0"), tag("0"),
      barrier.
      1 in a CONCAT is VAL_NEEDS_RESOLUTION in var-tracking.c.  */
   unsigned int volatil : 1;
-  /* 1 in a REG if the register is used only in exit code a loop.
+  /* 1 in a MEM if the access is restricted, also for stack spills.
+     1 in a REG if the register is used only in exit code a loop.
      1 in a SUBREG expression if was generated from a variable with a
      promoted mode.
      1 in a CODE_LABEL if the label is used for nonlocal gotos
@@ -2294,6 +2295,10 @@ do {								        \
 #define ASM_OPERANDS_SOURCE_LOCATION(RTX) XCUINT (RTX, 6, ASM_OPERANDS)
 #define ASM_INPUT_SOURCE_LOCATION(RTX) XCUINT (RTX, 1, ASM_INPUT)
 
+/* 1 if RTX is a mem that is marked as restrict or a stack spill.  */
+#define MEM_IN_STRUCT_P(RTX) \
+  (RTL_FLAG_CHECK1 ("MEM_IN_STRUCT_P", (RTX), MEM)->in_struct)
+
 /* 1 if RTX is a mem that is statically allocated in read-only memory.  */
 #define MEM_READONLY_P(RTX) \
   (RTL_FLAG_CHECK1 ("MEM_READONLY_P", (RTX), MEM)->unchanging)
@@ -2367,6 +2372,7 @@ do {								        \
 /* Copy the attributes that apply to memory locations from RHS to LHS.  */
 #define MEM_COPY_ATTRIBUTES(LHS, RHS)				\
   (MEM_VOLATILE_P (LHS) = MEM_VOLATILE_P (RHS),			\
+   MEM_IN_STRUCT_P (LHS) = MEM_IN_STRUCT_P (RHS),               \
    MEM_NOTRAP_P (LHS) = MEM_NOTRAP_P (RHS),			\
    MEM_READONLY_P (LHS) = MEM_READONLY_P (RHS),			\
    MEM_KEEP_ALIAS_SET_P (LHS) = MEM_KEEP_ALIAS_SET_P (RHS),	\
