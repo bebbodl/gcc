@@ -3220,11 +3220,19 @@ const_int_cost (HOST_WIDE_INT i)
     }
 }
 
+extern bool
+m68k_68000_10_costs (rtx x, machine_mode mode, int outer_code,
+		int opno,
+		int *total, bool speed );
+
 static bool
 m68k_rtx_costs (rtx x, machine_mode mode, int outer_code,
 		int opno ATTRIBUTE_UNUSED,
 		int *total, bool speed ATTRIBUTE_UNUSED)
 {
+	if (1)
+		return m68k_68000_10_costs (x, mode, outer_code, opno, total, speed);
+
   int code = GET_CODE (x);
 
   switch (code)
@@ -5167,10 +5175,13 @@ print_operand_address (FILE *file, rtx addr)
 	    asm_fprintf (file, "%LL%d(%Rpc,", labelno);
 	  else
 	    {
-	      if (address.offset)
-		output_addr_const (file, address.offset);
-
 	      putc ('(', file);
+
+	      if (address.offset) {
+		output_addr_const (file, address.offset);
+	      putc (',', file);
+	      }
+
 	      if (address.base)
 		fputs (M68K_REGNAME (REGNO (address.base)), file);
 	    }
