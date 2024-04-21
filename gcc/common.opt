@@ -2275,7 +2275,7 @@ EnumValue
 Enum(tls_model) String(local-exec) Value(TLS_MODEL_LOCAL_EXEC)
 
 ftoplevel-reorder
-Common Report Var(flag_toplevel_reorder) Init(2)
+Common Report Var(flag_toplevel_reorder) Init(0)
 Reorder top level functions, variables, and asms.
 
 ftracer
