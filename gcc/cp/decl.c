@@ -6721,6 +6721,12 @@ cp_finish_decl (tree decl, tree init, bool init_const_expr_p,
 	}
     }
 
+  if (VAR_P (decl) && DECL_REGISTER (decl) && asmspec)
+	{
+	  set_user_assembler_name (decl, asmspec);
+	  DECL_HARD_REGISTER (decl) = 1;
+	}
+
   if (processing_template_decl)
     {
       bool type_dependent_p;
