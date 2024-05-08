@@ -15303,6 +15303,7 @@ tsubst_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl,
 		else
 		  {
 		    int const_init = false;
+		    tree asmspec_tree = NULL_TREE;
 		    maybe_push_decl (decl);
 		    if (VAR_P (decl)
 			&& DECL_PRETTY_FUNCTION_P (decl))
@@ -15319,7 +15320,19 @@ tsubst_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl,
 		    if (VAR_P (decl))
 		      const_init = (DECL_INITIALIZED_BY_CONSTANT_EXPRESSION_P
 				    (pattern_decl));
-		    cp_finish_decl (decl, init, const_init, NULL_TREE, 0);
+
+		    if (VAR_P (decl) && DECL_HARD_REGISTER (pattern_decl))
+		      {
+			tree id = DECL_ASSEMBLER_NAME (pattern_decl);
+			const char *asmspec = IDENTIFIER_POINTER (id);
+			gcc_assert (asmspec[0] == '*');
+			asmspec_tree
+			  = build_string (IDENTIFIER_LENGTH (id) - 1,
+					  asmspec + 1);
+			TREE_TYPE (asmspec_tree) = char_array_type_node;
+		      }
+
+		    cp_finish_decl (decl, init, const_init, asmspec_tree, 0);
 		  }
 	      }
 	  }
