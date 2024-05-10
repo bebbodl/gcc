@@ -367,21 +367,24 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
     "%{pg:gcrt0.o%s}%{!pg:%{p:mcrt0.o%s}%{!p:crt0.o%s}}}}}}"
 
 #define STARTFILE_LIBNIX_SPEC \
-  "%{ramiga-*:" \
-    "%{ramiga-lib: %{!fbaserel:libinit.o%s}%{fbaserel:libinitb.o%s}}" \
-    "%{ramiga-libr:libinitr.o%s}" \
-    "%{ramiga-dev:devinit.o%s}}" \
-  "%{!ramiga-*:" \
-    "%{resident32:nlrcrt0.o%s}" \
-    "%{!resident32:%{fbaserel32:nlbcrt0.o%s}" \
-    "%{!fbaserel32:" \
-    "%{!mcpu=68000:%{!mcpu=68010:"\
-      "%{!m68881:-u___cpucheck }"\
-      "%{m68881:-u___fpucheck }"\
-    "}} "\
-    "%{resident:nrcrt0.o%s}" \
-    "%{!resident:%{fbaserel:nbcrt0.o%s}" \
-    "%{!fbaserel:ncrt0.o%s}}}}}"
+  "%{shared:init_shared.o%s}" \
+  "%{!shared:" \
+    "%{ramiga-*:" \
+      "%{ramiga-lib: %{!fbaserel:libinit.o%s}%{fbaserel:libinitb.o%s}}" \
+      "%{ramiga-libr:libinitr.o%s}" \
+      "%{ramiga-dev:devinit.o%s}}" \
+    "%{!ramiga-*:" \
+      "%{resident32:nlrcrt0.o%s}" \
+      "%{!resident32:%{fbaserel32:nlbcrt0.o%s}" \
+      "%{!fbaserel32:" \
+      "%{!mcpu=68000:%{!mcpu=68010:"\
+	"%{!m68881:-u___cpucheck }"\
+	"%{m68881:-u___fpucheck }"\
+      "}} "\
+      "%{resident:nrcrt0.o%s}" \
+      "%{!resident:%{fbaserel:nbcrt0.o%s}" \
+      "%{!fbaserel:ncrt0.o%s}}}}}" \
+    "}"
 
 #define STARTFILE_CLIB2_SPEC \
   "%{resident32:nr32crt0.o%s}" \
@@ -504,6 +507,7 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
   "%{mcrt=nix*:%(link_libnix)} " \
   "%{mcrt=ixemul:%(link_ixemul)} " \
   "%{mcrt=clib2:%(link_clib2)} " \
+  "%{shared:%{!baserel:%{!resident:-m amiga_bss -shared -fl libso}}} " \
   "%{fbaserel:%{!resident:-m amiga_bss -fl libb}} " \
   "%{resident:-m amiga_bss -amiga-datadata-reloc -fl libb} " \
   "%{fbaserel32:%{!resident32:-m amiga_bss -fl libb32}} " \
