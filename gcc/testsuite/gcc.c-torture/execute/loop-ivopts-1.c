@@ -1,4 +1,5 @@
 /* From PR 18977.  */
+int dummy[32]; // add front padding data for amiga baserel mode
 void foo(float * x);
 
 int main()
