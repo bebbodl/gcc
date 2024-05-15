@@ -5430,8 +5430,12 @@ opt_autoinc ()
         return 0;
 
       int ssize = dsize;
-      if (ii.is_src_mem() && GET_CODE(SET_SRC(set)) == SIGN_EXTEND)
-        ssize /= 2;
+      if (ii.is_src_mem()) {
+	  if (GET_CODE(SET_SRC(set)) == SIGN_EXTEND)
+	    ssize /= 2;
+	  else if (GET_CODE(SET_SRC(set)) == FLOAT_TRUNCATE)
+	    ssize *= 2;
+      }
 
       // neither INC or nested MEM is allowed
       // check if src is a mem which can be converted into an auto inc
