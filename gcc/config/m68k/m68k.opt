@@ -219,7 +219,7 @@ Target RejectNegative Var(sas_regparm,1)
 Same as -mregparm=2 but do not use alternate registers
 
 fdouble-indirect
-Target Var(flag_double_indirect) Init(1)
+Target Var(flag_double_indirect) Init(0)
 Use double indirect addressing mode.
 
 fbbb=
