@@ -123,7 +123,8 @@ deletable_insn_p (rtx_insn *insn, bool fast, bitmap arg_stores)
   /* If INSN sets a global_reg, leave it untouched.  */
   FOR_EACH_INSN_DEF (def, insn)
     if (HARD_REGISTER_NUM_P (DF_REF_REGNO (def))
-	&& global_regs[DF_REF_REGNO (def)])
+//	&& global_regs[DF_REF_REGNO (def)]
+		       )
       return false;
     /* Initialization of pseudo PIC register should never be removed.  */
     else if (DF_REF_REG (def) == pic_offset_table_rtx

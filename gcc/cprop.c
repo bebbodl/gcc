@@ -1186,8 +1186,11 @@ do_local_cprop (rtx x, rtx_insn *insn)
       && (cprop_reg_p (x)
           || (GET_CODE (PATTERN (insn)) != USE
 	      && asm_noperands (PATTERN (insn)) < 0))
-	    /* SBF: ignore regs marked as REG_INC. */
-      && !find_reg_note (insn, REG_INC, x))
+      /* SBF: ignore regs marked as REG_INC. */
+      && !find_reg_note (insn, REG_INC, x)
+      /* SBF: don't replace hard regs. */
+      && !HARD_REGISTER_NUM_P (REGNO (x))
+    )
     {
       cselib_val *val = cselib_lookup (x, GET_MODE (x), 0, VOIDmode);
       struct elt_loc_list *l;

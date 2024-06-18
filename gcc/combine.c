@@ -1998,7 +1998,9 @@ can_combine_p (rtx_insn *insn, rtx_insn *i3, rtx_insn *pred ATTRIBUTE_UNUSED,
 
       if (REG_P (src)
 	  && ((REGNO (dest) < FIRST_PSEUDO_REGISTER
-	       && ! HARD_REGNO_MODE_OK (REGNO (dest), GET_MODE (dest)))
+	      /* SBF: don't allow a hard reg to vanish by a combine */
+	       // && ! HARD_REGNO_MODE_OK (REGNO (dest), GET_MODE (dest))
+	       )
 	      /* Don't extend the life of a hard register unless it is
 		 user variable (if we have few registers) or it can't
 		 fit into the desired register (meaning something special
