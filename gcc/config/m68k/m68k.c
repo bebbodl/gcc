@@ -3465,7 +3465,7 @@ m68k_const_method (HOST_WIDE_INT i)
   if (USE_MOVQ ((u >> 16) | (u << 16)))
     return SWAP;
 
-  if (TARGET_ISAB)
+  if (TARGET_ISAB || TARGET_68080)
     {
       /* Try using MVZ/MVS with an immediate value to load constants.  */
       if (i >= 0 && i <= 65535)
