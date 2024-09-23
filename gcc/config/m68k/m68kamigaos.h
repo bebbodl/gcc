@@ -402,6 +402,7 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
 #define SELF_SPEC \
  "%{noixemul:-B %:sdk_root(libnix/lib/)} " \
  "%{mcrt=nix*:-B %:sdk_root(libnix/lib/)} " \
+ "%{mcrt=library:-B %:sdk_root(libnix/lib/)} " \
  "%{mcrt=ixemul:-B %:sdk_root(ixemul/lib/)} " \
  "%{mcrt=clib2:-B %:sdk_root(clib2/lib/)} "
 
@@ -413,6 +414,7 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
 #define STARTFILE_SPEC \
   "%{noixemul:%(startfile_libnix)} " \
   "%{mcrt=nix*:%(startfile_libnix)} " \
+  "%{mcrt=library:%(startfile_libnix)} " \
   "%{mcrt=ixemul:%(startfile_ixemul)} " \
   "%{mcrt=clib2:%(startfile_clib2)} " \
   "%{!mcrt=*:%{!noixemul:%(startfile_newlib)}} "
@@ -440,6 +442,8 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
   "-lnixmain -lnix -lstubs " \
   "%{mstackcheck:-lstack} " \
   "%{mstackextend:-lstack}"
+#define LIB_LIBNIX4_SPEC \
+  "-lnix4 -lnix20 -lnixmain -lnix -lstubs "
 #define LIB_CLIB2_SPEC \
   "-lc -ldebug " \
   "%{mstackcheck:-lstack} " \
@@ -462,13 +466,14 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
 #define LIB_SPEC \
   "-( " \
   "%{noixemul:%(lib_libnix)} " \
+  "%{mcrt=library:%(lib_libnix4)} " \
   "%{mcrt=nix*:%(lib_libnix)} " \
   "%{mcrt=ixemul:%(lib_ixemul)} " \
   "%{mcrt=clib2:%(lib_clib2)} " \
   "%{!mcrt=*:%{!noixemul:%(lib_newlib)}} " \
   "-lamiga -lgcc "\
   __LPTHREAD__ \
-  "%{lm:-lm -l__m__ } "\
+  "%{lm:-lm } "\
   "-) "
 #endif
 
@@ -589,6 +594,7 @@ extern const char * amiga_m68k_prefix_func(int, const char **);
   {"lib_ixemul", LIB_IXEMUL_SPEC}, \
   {"lib_newlib", LIB_NEWLIB_SPEC}, \
   {"lib_libnix", LIB_LIBNIX_SPEC}, \
+  {"lib_libnix4", LIB_LIBNIX4_SPEC}, \
   {"lib_clib2", LIB_CLIB2_SPEC}, \
   {"link_ixemul", LINK_IXEMUL_SPEC}, \
   {"link_libnix", LINK_LIBNIX_SPEC}, \
