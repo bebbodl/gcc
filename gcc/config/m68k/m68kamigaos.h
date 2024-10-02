@@ -443,7 +443,7 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
   "%{mstackcheck:-lstack} " \
   "%{mstackextend:-lstack}"
 #define LIB_LIBNIX4_SPEC \
-  "-lnix4 -lnix20 -lnixmain -lnix -lstubs "
+  "-lnix4 -lstubs "
 #define LIB_CLIB2_SPEC \
   "-lc -ldebug " \
   "%{mstackcheck:-lstack} " \
