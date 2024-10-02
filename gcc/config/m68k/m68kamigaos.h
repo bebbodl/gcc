@@ -60,7 +60,6 @@ along with GCC; see the file COPYING3.  If not see
 #define MASK_ALWAYS_RESTORE_A4 0x8000000 /* 1 << 27 */
 #define TARGET_ALWAYS_RESTORE_A4 (target_flags & MASK_ALWAYS_RESTORE_A4)
 
-
 /* config/m68k.md has an explicit reference to the program counter,
    prefix this by the register prefix.  */
 
@@ -267,6 +266,7 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
 
 /* When creating shared libraries, use different 'errno'. */
 #define CPP_IXEMUL_SPEC \
+  "-isystem %:sdk_root(ixemul/include) " \
   "%{!ansi:-Dixemul} -D__ixemul__ -D__ixemul " \
   "%{malways-restore-a4:-Derrno=(*ixemul_errno)} " \
   "%{mrestore-a4:-Derrno=(*ixemul_errno)}"
@@ -350,18 +350,24 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
     "%{pg:gcrt0.o%s}%{!pg:%{p:mcrt0.o%s}%{!p:crt0.o%s}}}}}}"
 
 #define STARTFILE_LIBNIX_SPEC \
-  "%{ramiga-*:" \
-    "%{ramiga-lib:libinit.o%s}" \
-    "%{ramiga-libr:libinitr.o%s}" \
-    "%{ramiga-dev:devinit.o%s}}" \
-  "%{!ramiga-*:" \
-    "%{resident32:nlrcrt0.o%s}" \
-    "%{!resident32:%{fbaserel32:nlbcrt0.o%s}" \
-    "%{!fbaserel32:" \
-    "%{!mcpu=68000:%{!mcpu=68010:-u___cpucheck }} "\
-    "%{resident:nrcrt0.o%s}" \
-    "%{!resident:%{fbaserel:nbcrt0.o%s}" \
-    "%{!fbaserel:ncrt0.o%s}}}}}"
+  "%{shared:init_shared.o%s}" \
+  "%{!shared:" \
+    "%{ramiga-*:" \
+      "%{ramiga-lib: %{!fbaserel:libinit.o%s}%{fbaserel:libinitb.o%s}}" \
+      "%{ramiga-libr:libinitr.o%s}" \
+      "%{ramiga-dev:devinit.o%s}}" \
+    "%{!ramiga-*:" \
+      "%{resident32:nlrcrt0.o%s}" \
+      "%{!resident32:%{fbaserel32:nlbcrt0.o%s}" \
+      "%{!fbaserel32:" \
+      "%{!mcpu=68000:%{!mcpu=68010:"\
+	"%{!m68881:-u___cpucheck }"\
+	"%{m68881:-u___fpucheck }"\
+      "}} "\
+      "%{resident:nrcrt0.o%s}" \
+      "%{!resident:%{fbaserel:nbcrt0.o%s}" \
+      "%{!fbaserel:ncrt0.o%s}}}}}" \
+    "}"
 
 #define STARTFILE_CLIB2_SPEC \
   "%{resident32:nr32crt0.o%s}" \
@@ -379,6 +385,8 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
 #define SELF_SPEC \
  "%{noixemul:-B %:sdk_root(libnix/lib/)} " \
  "%{mcrt=nix*:-B %:sdk_root(libnix/lib/)} " \
+ "%{mcrt=library:-B %:sdk_root(libnix/lib/)} " \
+ "%{mcrt=ixemul:-B %:sdk_root(ixemul/lib/)} " \
  "%{mcrt=clib2:-B %:sdk_root(clib2/lib/)} "
 
 #undef    STARTFILE_SPEC
@@ -389,6 +397,7 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
 #define STARTFILE_SPEC \
   "%{noixemul:%(startfile_libnix)} " \
   "%{mcrt=nix*:%(startfile_libnix)} " \
+  "%{mcrt=library:%(startfile_libnix)} " \
   "%{mcrt=ixemul:%(startfile_ixemul)} " \
   "%{mcrt=clib2:%(startfile_clib2)} " \
   "%{!mcrt=*:%{!noixemul:%(startfile_newlib)}} "
@@ -416,6 +425,8 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
   "-lnixmain -lnix -lstubs " \
   "%{mstackcheck:-lstack} " \
   "%{mstackextend:-lstack}"
+#define LIB_LIBNIX4_SPEC \
+  "-lnix4 -lstubs "
 #define LIB_CLIB2_SPEC \
   "-lc -ldebug " \
   "%{mstackcheck:-lstack} " \
@@ -438,13 +449,14 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
 #define LIB_SPEC \
   "-( " \
   "%{noixemul:%(lib_libnix)} " \
+  "%{mcrt=library:%(lib_libnix4)} " \
   "%{mcrt=nix*:%(lib_libnix)} " \
   "%{mcrt=ixemul:%(lib_ixemul)} " \
   "%{mcrt=clib2:%(lib_clib2)} " \
   "%{!mcrt=*:%{!noixemul:%(lib_newlib)}} " \
   "-lamiga -lgcc "\
   __LPTHREAD__ \
-  "%{lm:-lm -l__m__ } "\
+  "%{lm:-lm } "\
   "-) "
 #endif
 
@@ -455,7 +467,7 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
    Also, pass appropriate linker flavours depending on user-supplied
    commandline options.  */
 
-#define LINK_IXEMUL_SPEC ""
+#define LINK_IXEMUL_SPEC "-L%:sdk_root(ixemul/lib)"
 #define LINK_LIBNIX_SPEC "-L%:sdk_root(libnix/lib)"
 #define LINK_CLIB2_SPEC "-L%:sdk_root(clib2/lib)"
 
@@ -478,10 +490,12 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
 #else
 #define LINK_SPEC \
   "-L%:sdk_root(../lib) " \
+  "%{fexceptions:-u___init_eh } "\
   "%{noixemul:%(link_libnix)} " \
   "%{mcrt=nix*:%(link_libnix)} " \
   "%{mcrt=ixemul:%(link_ixemul)} " \
   "%{mcrt=clib2:%(link_clib2)} " \
+  "%{shared:-shared -m amiga_bss -amiga-datadata-reloc -fl libb} " \
   "%{fbaserel:%{!resident:-m amiga_bss -fl libb}} " \
   "%{resident:-m amiga_bss -amiga-datadata-reloc -fl libb} " \
   "%{fbaserel32:%{!resident32:-m amiga_bss -fl libb32}} " \
@@ -499,7 +513,6 @@ if (target_flags & (MASK_RESTORE_A4|MASK_ALWAYS_RESTORE_A4)) \
   "%{msmall-code:-fno-function-cse}"
 
 #define LINK_CPU_SPEC \
-  "%{m6806*|mcpu=6806*:-fl libm060} " \
   "%{m6802*|mc6802*|m6803*|m6804*|m6806*|m6808*|mcpu=6802*|mcpu=6803*|mcpu=6804*|mcpu=6806*|mcpu=6808*:-fl libm020} " \
   "%{mhard-float|m68881|mcpu=6804*|mcpu=6806*|mcpu=6808*:-fl libm881}"
 
@@ -564,6 +577,7 @@ extern const char * amiga_m68k_prefix_func(int, const char **);
   {"lib_ixemul", LIB_IXEMUL_SPEC}, \
   {"lib_newlib", LIB_NEWLIB_SPEC}, \
   {"lib_libnix", LIB_LIBNIX_SPEC}, \
+  {"lib_libnix4", LIB_LIBNIX4_SPEC}, \
   {"lib_clib2", LIB_CLIB2_SPEC}, \
   {"link_ixemul", LINK_IXEMUL_SPEC}, \
   {"link_libnix", LINK_LIBNIX_SPEC}, \
@@ -618,17 +632,17 @@ extern void amigaos_prelink_hook (const char **, int *);
 extern void amigaos_postlink_hook (const char *);
 
 /* This macro is used to check if all collect2 facilities should be used.
- We need a few special ones, like stripping after linking.  */
+   We need a few special ones, like stripping after linking.  */
 
 #define DO_COLLECTING (do_collecting || amigaos_do_collecting())
 
 /* This macro is called in collect2 for every GCC argument name.
- ARG is a part of commandline (without '\0' at the end).  */
+   ARG is a part of commandline (without '\0' at the end).  */
 
 #define COLLECT2_GCC_OPTIONS_HOOK(ARG) amigaos_gccopts_hook(ARG)
 
 /* This macro is called in collect2 for every ld's "-l" or "*.o" or "*.a"
- argument.  ARG is a complete argument, with '\0' at the end.  */
+   argument.  ARG is a complete argument, with '\0' at the end.  */
 
 #define COLLECT2_LIBNAME_HOOK(ARG) amigaos_libname_hook(ARG)
 
@@ -637,14 +651,14 @@ extern void amigaos_postlink_hook (const char *);
 #define COLLECT2_EXTRA_CLEANUP amigaos_collect2_cleanup
 
 /* This macro is called just before the first linker invocation.
- LD1_ARGV is "char** argv", which will be passed to "ld".  STRIP is an
- *address* of "strip_flag" variable.  */
+   LD1_ARGV is "char** argv", which will be passed to "ld".  STRIP is an
+   *address* of "strip_flag" variable.  */
 
 #define COLLECT2_PRELINK_HOOK(LD1_ARGV, STRIP) \
 amigaos_prelink_hook((const char **)(LD1_ARGV), (STRIP))
 
 /* This macro is called just after the first linker invocation, in place of
- "nm" and "ldd".  OUTPUT_FILE is the executable's filename.  */
+   "nm" and "ldd".  OUTPUT_FILE is the executable's filename.  */
 
 #define COLLECT2_POSTLINK_HOOK(OUTPUT_FILE) amigaos_postlink_hook(OUTPUT_FILE)
 /* end-GG-local */
