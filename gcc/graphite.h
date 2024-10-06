@@ -27,6 +27,7 @@ along with GCC; see the file COPYING3.  If not see
 #include <isl/ctx.h>
 #include <isl/val_gmp.h>
 #include <isl/set.h>
+#include <isl/val.h>
 #include <isl/union_set.h>
 #include <isl/map.h>
 #include <isl/union_map.h>
