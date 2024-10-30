@@ -383,7 +383,7 @@ namespace
       {
 	next = NEXT_INSN (insn);
 
-	if (NONJUMP_INSN_P(insn))
+	if (NONDEBUG_INSN_P(insn))
 	  {
 
 	    rtx set = single_set (insn);
