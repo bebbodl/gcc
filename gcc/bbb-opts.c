@@ -1787,6 +1787,9 @@ insn_info::fledder (rtx set)
   if (GET_CODE(dst) == STRICT_LOW_PART || GET_CODE(dst) == SUBREG)
     dst = XEXP(dst, 0);
 
+  if (GET_CODE(src) == FIX)
+    src = XEXP(src, 0);
+
   mode = GET_MODE(dst);
   if (mode == VOIDmode)
     mode = GET_MODE(src);
@@ -5045,6 +5048,7 @@ opt_absolute (void)
       std::vector<unsigned> found;
       found.push_back (i);
       int base = ii.get_dst_mem_addr ();
+
       int max = base;
       unsigned j = i + 1;
       for (; j < infos->size (); ++j)
