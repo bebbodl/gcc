@@ -3023,9 +3023,9 @@ opt_reg_rename (void)
 
 	  // try next register in mask - but skip those of same kind
 	  if (newregno < 8)
-	    mask &= 0xffff00;
+	    mask &= 0x00ff00;
 	  else
-	    mask &= 0xff0000;
+	    mask = 0;
 	}
     }
   return changes;
