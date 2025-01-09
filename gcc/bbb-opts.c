@@ -5933,7 +5933,7 @@ opt_shift (void)
 			    {
 			      rtx set = single_set(kk->get_insn());
 			      rtx x = gen_rtx_SET(gen_rtx_REG (mode, dy), SET_SRC (set));
-			      rtx notes = REG_NOTES (ii.get_insn());
+			      rtx notes = REG_NOTES (kk->get_insn());
 			      rtx_insn * neu = emit_insn_before (x, kk->get_insn ());
 			      REG_NOTES(neu) = notes;
 			    }
